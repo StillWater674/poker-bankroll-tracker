@@ -461,6 +461,18 @@ export default function Home() {
       ? Math.min((currentBankroll / bankrollGoalUp) * 100, 100).toFixed(1)
       : "0.0"
 
+  const recommendedLimit =
+    bankrollRuleUpNumber > 0
+      ? Math.floor(currentBankroll / bankrollRuleUpNumber)
+      : 0
+
+  let recommendation = "Limite optimale"
+  if (recommendedLimit > currentBuyinNumber) {
+    recommendation = "Tu peux monter"
+  } else if (recommendedLimit < currentBuyinNumber) {
+    recommendation = "Redescente conseillée"
+  }
+
   let bankrollStatus = "Stable"
   if (currentBankroll >= bankrollGoalUp && bankrollGoalUp > 0) {
     bankrollStatus = "Prête à monter"
@@ -500,7 +512,7 @@ export default function Home() {
     return {
       background:
         "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
-      border: "1px solid var(--border)"
+        border: "1px solid var(--border)"
     }
   }
 
@@ -690,6 +702,26 @@ export default function Home() {
               <div className="kpi-value" style={{ color: getStatusColor(bankrollStatus) }}>
                 {bankrollStatus}
               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-3" style={{ marginTop: 18 }}>
+            <div className="kpi">
+              <div className="kpi-label">Limite recommandée</div>
+              <div className="kpi-value">{recommendedLimit} €</div>
+              <div className="kpi-meta">
+                Calculée sur {bankrollRuleUpNumber} buy-ins
+              </div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Limite actuelle</div>
+              <div className="kpi-value">{currentBuyinNumber} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Conseil automatique</div>
+              <div className="kpi-value">{recommendation}</div>
             </div>
           </div>
         </div>
