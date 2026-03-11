@@ -694,7 +694,76 @@ export default function Home() {
               Sauvegarder
             </button>
           </div>
+<div className="card dashboard-section" style={{ marginBottom: 20 }}>
 
+<h3 className="section-title">Objectif bankroll pour monter de limite</h3>
+
+<p className="section-subtitle">
+Suivi automatique de ta progression vers la prochaine limite.
+</p>
+
+<div className="grid grid-4">
+
+<div className="kpi">
+<div className="kpi-label">Bankroll actuelle</div>
+<div className="kpi-value">{currentBankroll} €</div>
+</div>
+
+<div className="kpi">
+<div className="kpi-label">Objectif bankroll</div>
+<div className="kpi-value">{bankrollGoalUp} €</div>
+<div className="kpi-meta">pour jouer {targetBuyinNumber}€</div>
+</div>
+
+<div className="kpi">
+<div className="kpi-label">Manque pour monter</div>
+<div className="kpi-value">{bankrollMissingUp} €</div>
+</div>
+
+<div className="kpi">
+<div className="kpi-label">Progression</div>
+<div className="kpi-value">{bankrollProgressUp}%</div>
+</div>
+
+</div>
+
+
+<div
+style={{
+height:12,
+background:"#1e2330",
+borderRadius:999,
+marginTop:20,
+overflow:"hidden"
+}}
+>
+<div
+style={{
+width:`${bankrollProgressUp}%`,
+height:"100%",
+background:"linear-gradient(90deg,#ff9f43,#ff6b6b)"
+}}
+></div>
+</div>
+
+
+<div style={{ marginTop:14 }}>
+
+<div className="kpi-meta">
+Limite actuelle : {currentBuyinNumber} €
+</div>
+
+<div className="kpi-meta">
+Prochaine limite : {targetBuyinNumber} €
+</div>
+
+<div className="kpi-meta">
+Statut : {bankrollStatus}
+</div>
+
+</div>
+
+</div>
           <div className="grid grid-4">
             <div className="kpi">
               <div className="kpi-label">Limite actuelle</div>
