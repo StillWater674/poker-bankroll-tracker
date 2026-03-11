@@ -380,7 +380,13 @@ export default function Home() {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
     router.push("/login")
   }
 
@@ -451,7 +457,7 @@ export default function Home() {
             <div className="brand-text">
               <div className="brand-title">Poker Tracker</div>
               <div className="brand-subtitle">
-                {currentUser?.email ? `Connectée : ${currentUser.email}` : "Dashboard premium de grind"}
+                {currentUser?.user_metadata?.pseudo || currentUser?.email || "Dashboard premium de grind"}
               </div>
             </div>
           </div>
@@ -460,9 +466,15 @@ export default function Home() {
             <Link href="/add">
               <button className="btn">Ajouter un tournoi</button>
             </Link>
+
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
+
+            <Link href="/movements-add">
+              <button className="btn btn-secondary">Ajouter un mouvement</button>
+            </Link>
+
             <button className="btn btn-secondary" onClick={handleLogout}>
               Déconnexion
             </button>
@@ -517,9 +529,7 @@ export default function Home() {
             <button className="btn" onClick={saveStartingBankroll}>
               Enregistrer
             </button>
-            <Link href="/movements-add">
-              <button className="btn btn-secondary">Ajouter un mouvement</button>
-            </Link>
+
             <Link href="/movements-history">
               <button className="btn btn-secondary">Historique mouvements</button>
             </Link>
