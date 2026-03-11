@@ -28,6 +28,7 @@ export default function Home() {
   })
 
   const [chartData, setChartData] = useState([])
+  const [monthlyData, setMonthlyData] = useState([])
   const [buyinStats, setBuyinStats] = useState([])
   const [roomStats, setRoomStats] = useState([])
   const [roomChartData, setRoomChartData] = useState([])
@@ -52,6 +53,32 @@ export default function Home() {
 
     fetchStats(initialBankroll, savedRoom || "Toutes")
   }, [])
+
+  function formatMonthKey(dateString) {
+    const d = new Date(dateString)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, "0")
+    return `${year}-${month}`
+  }
+
+  function formatMonthLabel(monthKey) {
+    const [year, month] = monthKey.split("-")
+    const monthNames = [
+      "Jan",
+      "Fév",
+      "Mar",
+      "Avr",
+      "Mai",
+      "Juin",
+      "Juil",
+      "Aoû",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Déc"
+    ]
+    return `${monthNames[Number(month) - 1]} ${year}`
+  }
 
   async function fetchStats(baseBankroll = 0, roomChoice = selectedRoom) {
     const { data: tournoisData, error: tournoisError } = await supabase
@@ -81,11 +108,13 @@ export default function Home() {
     let buyins = 0
     const grouped = {}
     const rooms = {}
+    const months = {}
 
     tournois.forEach((t) => {
       const tournoiProfit = Number(t.profit) || 0
       const tournoiBuyin = Number(t.buyin) || 0
       const room = t.room || "Inconnu"
+      const monthKey = formatMonthKey(t.date)
 
       profit += tournoiProfit
       buyins += tournoiBuyin
@@ -117,6 +146,20 @@ export default function Home() {
       rooms[room].count += 1
       rooms[room].totalProfit += tournoiProfit
       rooms[room].totalBuyins += tournoiBuyin
+
+      if (!months[monthKey]) {
+        months[monthKey] = {
+          monthKey,
+          label: formatMonthLabel(monthKey),
+          profit: 0,
+          volume: 0,
+          buyins: 0
+        }
+      }
+
+      months[monthKey].profit += tournoiProfit
+      months[monthKey].volume += 1
+      months[monthKey].buyins += tournoiBuyin
     })
 
     let mouvementsImpact = 0
@@ -161,6 +204,14 @@ export default function Home() {
         type: event.type
       }
     })
+
+    const monthlyArray = Object.values(months)
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+      .map((item) => ({
+        ...item,
+        roi:
+          item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0"
+      }))
 
     const buyinArray = Object.values(grouped)
       .map((item) => ({
@@ -243,6 +294,7 @@ export default function Home() {
     })
 
     setChartData(globalChart)
+    setMonthlyData(monthlyArray)
     setBuyinStats(buyinArray)
     setRoomStats(roomArray)
     setRoomOptions(uniqueRooms)
@@ -430,6 +482,24 @@ export default function Home() {
         </div>
 
         <div className="spacer" />
+
+        <div className="card chart-card" style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Graphique mensuel</h3>
+          <ResponsiveContainer width="100%" height="88%">
+            <BarChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+              <XAxis dataKey="label" stroke="#aab2c5" />
+              <YAxis stroke="#aab2c5" />
+              <Tooltip
+                formatter={(value, name, props) => {
+                  if (name === "profit") return [`${value} €`, "Profit mensuel"]
+                  return [value, name]
+                }}
+              />
+              <Bar dataKey="profit" fill="#4ea8de" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
         <div className="card chart-card" style={{ marginBottom: 20 }}>
           <div
