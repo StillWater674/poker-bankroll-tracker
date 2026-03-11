@@ -44,8 +44,10 @@ export default function Home() {
   const [startingBankroll, setStartingBankroll] = useState(0)
   const [inputBankroll, setInputBankroll] = useState("")
 
+  const [currentBuyin, setCurrentBuyin] = useState("5")
   const [targetBuyin, setTargetBuyin] = useState("10")
-  const [bankrollRule, setBankrollRule] = useState("100")
+  const [bankrollRuleUp, setBankrollRuleUp] = useState("100")
+  const [bankrollRuleDown, setBankrollRuleDown] = useState("70")
 
   useEffect(() => {
     async function checkSession() {
@@ -62,8 +64,10 @@ export default function Home() {
       const savedBankroll = localStorage.getItem("startingBankroll")
       const initialBankroll = savedBankroll ? Number(savedBankroll) : 0
       const savedRoom = localStorage.getItem("selectedRoom")
+      const savedCurrentBuyin = localStorage.getItem("currentBuyin")
       const savedTargetBuyin = localStorage.getItem("targetBuyin")
-      const savedBankrollRule = localStorage.getItem("bankrollRule")
+      const savedBankrollRuleUp = localStorage.getItem("bankrollRuleUp")
+      const savedBankrollRuleDown = localStorage.getItem("bankrollRuleDown")
 
       if (savedBankroll) {
         setStartingBankroll(initialBankroll)
@@ -74,12 +78,20 @@ export default function Home() {
         setSelectedRoom(savedRoom)
       }
 
+      if (savedCurrentBuyin) {
+        setCurrentBuyin(savedCurrentBuyin)
+      }
+
       if (savedTargetBuyin) {
         setTargetBuyin(savedTargetBuyin)
       }
 
-      if (savedBankrollRule) {
-        setBankrollRule(savedBankrollRule)
+      if (savedBankrollRuleUp) {
+        setBankrollRuleUp(savedBankrollRuleUp)
+      }
+
+      if (savedBankrollRuleDown) {
+        setBankrollRuleDown(savedBankrollRuleDown)
       }
 
       await fetchStats(initialBankroll, savedRoom || "Toutes")
@@ -418,9 +430,11 @@ export default function Home() {
     fetchStats(startingBankroll, room)
   }
 
-  function saveBankrollGoalSettings() {
+  function saveBankrollSettings() {
+    localStorage.setItem("currentBuyin", currentBuyin)
     localStorage.setItem("targetBuyin", targetBuyin)
-    localStorage.setItem("bankrollRule", bankrollRule)
+    localStorage.setItem("bankrollRuleUp", bankrollRuleUp)
+    localStorage.setItem("bankrollRuleDown", bankrollRuleDown)
   }
 
   const roi =
@@ -433,20 +447,37 @@ export default function Home() {
     return roomStats.find((r) => r.room === selectedRoom) || null
   }, [roomStats, selectedRoom])
 
-  const goalTargetBuyin = Number(targetBuyin) || 0
-  const goalRule = Number(bankrollRule) || 0
-  const bankrollGoal = goalTargetBuyin * goalRule
-  const bankrollMissing = Math.max(bankrollGoal - currentBankroll, 0)
-  const bankrollProgress =
-    bankrollGoal > 0
-      ? Math.min((currentBankroll / bankrollGoal) * 100, 100).toFixed(1)
+  const currentBuyinNumber = Number(currentBuyin) || 0
+  const targetBuyinNumber = Number(targetBuyin) || 0
+  const bankrollRuleUpNumber = Number(bankrollRuleUp) || 0
+  const bankrollRuleDownNumber = Number(bankrollRuleDown) || 0
+
+  const bankrollGoalUp = targetBuyinNumber * bankrollRuleUpNumber
+  const bankrollDangerDown = currentBuyinNumber * bankrollRuleDownNumber
+
+  const bankrollMissingUp = Math.max(bankrollGoalUp - currentBankroll, 0)
+  const bankrollProgressUp =
+    bankrollGoalUp > 0
+      ? Math.min((currentBankroll / bankrollGoalUp) * 100, 100).toFixed(1)
       : "0.0"
 
-  let bankrollStatus = "Reste sur cette limite"
-  if (Number(bankrollProgress) >= 100) {
+  let bankrollStatus = "Stable"
+  if (currentBankroll >= bankrollGoalUp && bankrollGoalUp > 0) {
     bankrollStatus = "Prête à monter"
-  } else if (Number(bankrollProgress) >= 80) {
+  } else if (currentBankroll < bankrollDangerDown && bankrollDangerDown > 0) {
+    bankrollStatus = "Redescente recommandée"
+  } else if (Number(bankrollProgressUp) >= 80) {
     bankrollStatus = "Presque prête"
+  } else if (bankrollDangerDown > 0 && currentBankroll <= bankrollDangerDown * 1.15) {
+    bankrollStatus = "Attention"
+  }
+
+  function getStatusColor(status) {
+    if (status === "Prête à monter") return "#62d394"
+    if (status === "Presque prête") return "#f5b041"
+    if (status === "Attention") return "#ffb86b"
+    if (status === "Redescente recommandée") return "#ff8b8b"
+    return "#f4f7fb"
   }
 
   function getHeatmapStyle(item) {
@@ -572,71 +603,92 @@ export default function Home() {
         </div>
 
         <div className="card dashboard-section" style={{ marginBottom: 20 }}>
-          <h3 className="section-title">Objectif bankroll & montée de limites</h3>
+          <h3 className="section-title">Gestion bankroll : montée et redescente</h3>
           <p className="section-subtitle">
-            Définis ta prochaine limite et la règle de bankroll management.
+            Définis ta limite actuelle, ta prochaine limite, et tes règles de bankroll management.
           </p>
 
           <div className="actions" style={{ marginBottom: 18 }}>
             <input
               className="input"
-              style={{ maxWidth: 180 }}
+              style={{ maxWidth: 170 }}
               type="number"
-              value={targetBuyin}
-              onChange={(e) => setTargetBuyin(e.target.value)}
-              placeholder="Buy-in cible"
+              value={currentBuyin}
+              onChange={(e) => setCurrentBuyin(e.target.value)}
+              placeholder="Limite actuelle"
             />
 
             <input
               className="input"
-              style={{ maxWidth: 180 }}
+              style={{ maxWidth: 170 }}
               type="number"
-              value={bankrollRule}
-              onChange={(e) => setBankrollRule(e.target.value)}
-              placeholder="Règle buy-ins"
+              value={targetBuyin}
+              onChange={(e) => setTargetBuyin(e.target.value)}
+              placeholder="Prochaine limite"
             />
 
-            <button className="btn" onClick={saveBankrollGoalSettings}>
-              Sauvegarder l’objectif
+            <input
+              className="input"
+              style={{ maxWidth: 170 }}
+              type="number"
+              value={bankrollRuleUp}
+              onChange={(e) => setBankrollRuleUp(e.target.value)}
+              placeholder="Règle montée"
+            />
+
+            <input
+              className="input"
+              style={{ maxWidth: 170 }}
+              type="number"
+              value={bankrollRuleDown}
+              onChange={(e) => setBankrollRuleDown(e.target.value)}
+              placeholder="Règle redescente"
+            />
+
+            <button className="btn" onClick={saveBankrollSettings}>
+              Sauvegarder
             </button>
           </div>
 
           <div className="grid grid-4">
             <div className="kpi">
-              <div className="kpi-label">Buy-in cible</div>
-              <div className="kpi-value">{goalTargetBuyin} €</div>
+              <div className="kpi-label">Limite actuelle</div>
+              <div className="kpi-value">{currentBuyinNumber} €</div>
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Règle bankroll</div>
-              <div className="kpi-value">{goalRule} BI</div>
+              <div className="kpi-label">Prochaine limite</div>
+              <div className="kpi-value">{targetBuyinNumber} €</div>
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Bankroll objectif</div>
-              <div className="kpi-value">{bankrollGoal} €</div>
+              <div className="kpi-label">Objectif montée</div>
+              <div className="kpi-value">{bankrollGoalUp} €</div>
+              <div className="kpi-meta">{bankrollRuleUpNumber} buy-ins</div>
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Il manque</div>
-              <div className="kpi-value">{bankrollMissing} €</div>
+              <div className="kpi-label">Seuil redescente</div>
+              <div className="kpi-value">{bankrollDangerDown} €</div>
+              <div className="kpi-meta">{bankrollRuleDownNumber} buy-ins</div>
             </div>
           </div>
 
-          <div className="grid grid-2" style={{ marginTop: 18 }}>
+          <div className="grid grid-3" style={{ marginTop: 18 }}>
             <div className="kpi">
-              <div className="kpi-label">Progression</div>
-              <div className="kpi-value">{bankrollProgress} %</div>
-              <div className="kpi-meta">
-                Bankroll actuelle {currentBankroll} € / objectif {bankrollGoal} €
-              </div>
+              <div className="kpi-label">Il manque pour monter</div>
+              <div className="kpi-value">{bankrollMissingUp} €</div>
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Statut</div>
-              <div className="kpi-value">{bankrollStatus}</div>
-              <div className="kpi-meta">
-                100% = prête à monter • 80% = presque prête
+              <div className="kpi-label">Progression vers la montée</div>
+              <div className="kpi-value">{bankrollProgressUp} %</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Statut actuel</div>
+              <div className="kpi-value" style={{ color: getStatusColor(bankrollStatus) }}>
+                {bankrollStatus}
               </div>
             </div>
           </div>
