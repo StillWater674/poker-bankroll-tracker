@@ -22,11 +22,13 @@ export default function Home() {
 
   const [stats, setStats] = useState({
     profit: 0,
-    buyins: 0,
+    ev: 0,
     count: 0,
+    buyins: 0,
     mouvementsImpact: 0,
     abi: 0,
     averageProfit: 0,
+    evDiff: 0,
     bestRoom: null,
     worstRoom: null,
     bestBuyin: null,
@@ -51,6 +53,7 @@ export default function Home() {
 
   const [monthlyGoal, setMonthlyGoal] = useState(200)
   const [monthlyProfitGoal, setMonthlyProfitGoal] = useState(1000)
+  const [yearlyGoal, setYearlyGoal] = useState(10000)
 
   useEffect(() => {
     async function checkSession() {
@@ -73,6 +76,7 @@ export default function Home() {
       const savedBankrollRuleDown = localStorage.getItem("bankrollRuleDown")
       const savedMonthlyGoal = localStorage.getItem("monthlyGoal")
       const savedMonthlyProfitGoal = localStorage.getItem("monthlyProfitGoal")
+      const savedYearlyGoal = localStorage.getItem("yearlyGoal")
 
       if (savedBankroll) {
         setStartingBankroll(initialBankroll)
@@ -105,6 +109,10 @@ export default function Home() {
 
       if (savedMonthlyProfitGoal) {
         setMonthlyProfitGoal(Number(savedMonthlyProfitGoal))
+      }
+
+      if (savedYearlyGoal) {
+        setYearlyGoal(Number(savedYearlyGoal))
       }
 
       await fetchStats(initialBankroll, savedRoom || "Toutes")
@@ -179,6 +187,7 @@ export default function Home() {
     const mouvements = mouvementsData || []
 
     let profit = 0
+    let evTotal = 0
     let buyins = 0
     const grouped = {}
     const rooms = {}
@@ -193,15 +202,31 @@ export default function Home() {
       Dimanche: { day: "Dimanche", count: 0, profit: 0, buyins: 0 }
     }
 
-    tournois.forEach((t) => {
+    let runningProfit = 0
+    let runningEv = 0
+    const tournamentCurve = []
+
+    tournois.forEach((t, index) => {
       const tournoiProfit = Number(t.profit) || 0
       const tournoiBuyin = Number(t.buyin) || 0
+      const tournoiEv = Number(t.ev) || 0
       const room = t.room || "Inconnu"
       const monthKey = formatMonthKey(t.date)
       const weekday = getFrenchWeekday(t.date)
 
       profit += tournoiProfit
+      evTotal += tournoiEv
       buyins += tournoiBuyin
+
+      runningProfit += tournoiProfit
+      runningEv += tournoiEv
+
+      tournamentCurve.push({
+        id: index + 1,
+        date: t.date,
+        profit: runningProfit,
+        ev: runningEv
+      })
 
       const buyinKey = tournoiBuyin.toString()
 
@@ -236,6 +261,7 @@ export default function Home() {
           monthKey,
           label: formatMonthLabel(monthKey),
           profit: 0,
+          ev: 0,
           volume: 0,
           buyins: 0,
           abi: 0,
@@ -244,6 +270,7 @@ export default function Home() {
       }
 
       months[monthKey].profit += tournoiProfit
+      months[monthKey].ev += tournoiEv
       months[monthKey].volume += 1
       months[monthKey].buyins += tournoiBuyin
 
@@ -304,7 +331,8 @@ export default function Home() {
         abi:
           item.volume > 0 ? (item.buyins / item.volume).toFixed(2) : "0.00",
         averageProfit:
-          item.volume > 0 ? (item.profit / item.volume).toFixed(2) : "0.00"
+          item.volume > 0 ? (item.profit / item.volume).toFixed(2) : "0.00",
+        evDiff: (item.profit - item.ev).toFixed(2)
       }))
 
     const buyinArray = Object.values(grouped)
@@ -362,7 +390,6 @@ export default function Home() {
       const roomEvents = roomTournois
         .map((t) => ({
           date: t.date,
-          type: "tournoi",
           variation: Number(t.profit) || 0
         }))
         .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -397,11 +424,13 @@ export default function Home() {
 
     setStats({
       profit,
-      buyins,
+      ev: evTotal,
       count: tournois.length,
+      buyins,
       mouvementsImpact,
       abi,
       averageProfit,
+      evDiff: Number((profit - evTotal).toFixed(2)),
       bestRoom,
       worstRoom,
       bestBuyin,
@@ -415,7 +444,13 @@ export default function Home() {
     setRoomOptions(uniqueRooms)
     setRoomChartData(filteredRoomChart)
     setWeekdayStats(weekdayArray)
+
+    // courbe EV vs profit
+    setChartData((prev) => prev)
+    setEvChartData(tournamentCurve)
   }
+
+  const [evChartData, setEvChartData] = useState([])
 
   async function handleLogout() {
     const { error } = await supabase.auth.signOut()
@@ -453,6 +488,7 @@ export default function Home() {
   function saveMonthlyGoals() {
     localStorage.setItem("monthlyGoal", String(monthlyGoal))
     localStorage.setItem("monthlyProfitGoal", String(monthlyProfitGoal))
+    localStorage.setItem("yearlyGoal", String(yearlyGoal))
   }
 
   const roi =
@@ -516,6 +552,15 @@ export default function Home() {
     monthlyProfitGoal > 0
       ? Math.min((currentMonthProfit / monthlyProfitGoal) * 100, 100).toFixed(1)
       : "0.0"
+
+  const yearlyProgress =
+    yearlyGoal > 0
+      ? Math.min((stats.profit / yearlyGoal) * 100, 100).toFixed(1)
+      : "0.0"
+
+  let evStatus = "Even run"
+  if (stats.evDiff > 0) evStatus = "Run good"
+  if (stats.evDiff < 0) evStatus = "Run bad"
 
   function getStatusColor(status) {
     if (status === "Prête à monter") return "#62d394"
@@ -595,17 +640,17 @@ export default function Home() {
         <div className="hero">
           <div className="hero-grid">
             <div>
-              <h1 className="hero-title">Ton cockpit bankroll, room, volume et ROI.</h1>
+              <h1 className="hero-title">Ton cockpit bankroll, room, volume, ROI et EV.</h1>
               <p className="hero-subtitle">
-                Lis ta progression comme une joueuse sérieuse : courbes, ABI, profit par room,
-                rythme mensuel et jours les plus rentables.
+                Lis ta progression comme une joueuse sérieuse : courbes, ABI, EV,
+                profit par room, rythme mensuel et jours les plus rentables.
               </p>
 
               <div className="hero-badges">
                 <div className="badge">Bankroll réelle</div>
                 <div className="badge">ROI global</div>
                 <div className="badge">Analyse par room</div>
-                <div className="badge">Volume mensuel</div>
+                <div className="badge">EV tracking</div>
               </div>
             </div>
 
@@ -619,8 +664,8 @@ export default function Home() {
                 <div className="hero-side-value">{stats.profit} €</div>
               </div>
               <div className="hero-side-card">
-                <div className="hero-side-label">ROI global</div>
-                <div className="hero-side-value">{roi} %</div>
+                <div className="hero-side-label">EV totale</div>
+                <div className="hero-side-value">{stats.ev} €</div>
               </div>
             </div>
           </div>
@@ -694,76 +739,7 @@ export default function Home() {
               Sauvegarder
             </button>
           </div>
-<div className="card dashboard-section" style={{ marginBottom: 20 }}>
 
-<h3 className="section-title">Objectif bankroll pour monter de limite</h3>
-
-<p className="section-subtitle">
-Suivi automatique de ta progression vers la prochaine limite.
-</p>
-
-<div className="grid grid-4">
-
-<div className="kpi">
-<div className="kpi-label">Bankroll actuelle</div>
-<div className="kpi-value">{currentBankroll} €</div>
-</div>
-
-<div className="kpi">
-<div className="kpi-label">Objectif bankroll</div>
-<div className="kpi-value">{bankrollGoalUp} €</div>
-<div className="kpi-meta">pour jouer {targetBuyinNumber}€</div>
-</div>
-
-<div className="kpi">
-<div className="kpi-label">Manque pour monter</div>
-<div className="kpi-value">{bankrollMissingUp} €</div>
-</div>
-
-<div className="kpi">
-<div className="kpi-label">Progression</div>
-<div className="kpi-value">{bankrollProgressUp}%</div>
-</div>
-
-</div>
-
-
-<div
-style={{
-height:12,
-background:"#1e2330",
-borderRadius:999,
-marginTop:20,
-overflow:"hidden"
-}}
->
-<div
-style={{
-width:`${bankrollProgressUp}%`,
-height:"100%",
-background:"linear-gradient(90deg,#ff9f43,#ff6b6b)"
-}}
-></div>
-</div>
-
-
-<div style={{ marginTop:14 }}>
-
-<div className="kpi-meta">
-Limite actuelle : {currentBuyinNumber} €
-</div>
-
-<div className="kpi-meta">
-Prochaine limite : {targetBuyinNumber} €
-</div>
-
-<div className="kpi-meta">
-Statut : {bankrollStatus}
-</div>
-
-</div>
-
-</div>
           <div className="grid grid-4">
             <div className="kpi">
               <div className="kpi-label">Limite actuelle</div>
@@ -829,7 +805,7 @@ Statut : {bankrollStatus}
         </div>
 
         <div className="card dashboard-section" style={{ marginBottom: 20 }}>
-          <h3 className="section-title">Objectifs mensuels</h3>
+          <h3 className="section-title">Objectifs mensuels et annuel</h3>
           <p className="section-subtitle">
             Volume de grind et profit cible pour rester disciplinée.
           </p>
@@ -849,7 +825,16 @@ Statut : {bankrollStatus}
               type="number"
               value={monthlyProfitGoal}
               onChange={(e) => setMonthlyProfitGoal(Number(e.target.value))}
-              placeholder="Objectif profit €"
+              placeholder="Objectif profit mensuel €"
+              style={{ maxWidth: 200 }}
+            />
+
+            <input
+              className="input"
+              type="number"
+              value={yearlyGoal}
+              onChange={(e) => setYearlyGoal(Number(e.target.value))}
+              placeholder="Objectif annuel €"
               style={{ maxWidth: 180 }}
             />
 
@@ -872,7 +857,7 @@ Statut : {bankrollStatus}
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Progression</div>
+              <div className="kpi-label">Progression volume</div>
               <div className="kpi-value">{goalProgressVolume}%</div>
             </div>
           </div>
@@ -897,7 +882,7 @@ Statut : {bankrollStatus}
 
           <div className="grid grid-3" style={{ marginTop: 24 }}>
             <div className="kpi">
-              <div className="kpi-label">Objectif profit</div>
+              <div className="kpi-label">Objectif profit mensuel</div>
               <div className="kpi-value">{monthlyProfitGoal} €</div>
             </div>
 
@@ -907,7 +892,7 @@ Statut : {bankrollStatus}
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Progression</div>
+              <div className="kpi-label">Progression profit</div>
               <div className="kpi-value">{goalProgressProfit}%</div>
             </div>
           </div>
@@ -926,6 +911,41 @@ Statut : {bankrollStatus}
                 width: `${goalProgressProfit}%`,
                 height: "100%",
                 background: "linear-gradient(90deg,#2ecc71,#00c9a7)"
+              }}
+            />
+          </div>
+
+          <div className="grid grid-3" style={{ marginTop: 24 }}>
+            <div className="kpi">
+              <div className="kpi-label">Objectif annuel</div>
+              <div className="kpi-value">{yearlyGoal} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Profit annuel actuel</div>
+              <div className="kpi-value">{stats.profit} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Progression annuelle</div>
+              <div className="kpi-value">{yearlyProgress}%</div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              height: 10,
+              background: "#1e2330",
+              borderRadius: 999,
+              marginTop: 14,
+              overflow: "hidden"
+            }}
+          >
+            <div
+              style={{
+                width: `${yearlyProgress}%`,
+                height: "100%",
+                background: "linear-gradient(90deg,#f093fb,#f5576c)"
               }}
             />
           </div>
@@ -954,6 +974,32 @@ Statut : {bankrollStatus}
             <div className="kpi-label">Profit moyen / tournoi</div>
             <div className="kpi-value">{stats.averageProfit} €</div>
             <div className="kpi-meta">Moyenne de gain ou perte par entrée</div>
+          </div>
+        </div>
+
+        <div className="grid grid-4 dashboard-section">
+          <div className="kpi">
+            <div className="kpi-label">Profit réel</div>
+            <div className="kpi-value">{stats.profit} €</div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">EV totale</div>
+            <div className="kpi-value">{stats.ev} €</div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">Écart réel vs EV</div>
+            <div className="kpi-value">{stats.evDiff} €</div>
+            <div className="kpi-meta">profit - EV</div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">Statut EV</div>
+            <div className="kpi-value">{evStatus}</div>
+            <div className="kpi-meta">
+              {stats.evDiff < 0 ? "tu run sous l'EV" : stats.evDiff > 0 ? "tu run au-dessus de l'EV" : "équilibre"}
+            </div>
           </div>
         </div>
 
@@ -1040,6 +1086,39 @@ Statut : {bankrollStatus}
           </div>
 
           <div className="card chart-card">
+            <h3 className="section-title">Courbe Profit vs EV</h3>
+            <ResponsiveContainer width="100%" height="88%">
+              <LineChart data={evChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+                <XAxis dataKey="date" stroke="#aab2c5" />
+                <YAxis stroke="#aab2c5" />
+                <Tooltip
+                  formatter={(value, name) => [`${value} €`, name === "profit" ? "Profit" : "EV"]}
+                  labelFormatter={(label) => `Date : ${label}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="profit"
+                  stroke="#8b7cf6"
+                  strokeWidth={3}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="ev"
+                  stroke="#2ecc71"
+                  strokeWidth={3}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="grid grid-2 dashboard-section">
+          <div className="card chart-card">
             <h3 className="section-title">Graphique mensuel</h3>
             <ResponsiveContainer width="100%" height="88%">
               <BarChart data={monthlyData}>
@@ -1051,9 +1130,7 @@ Statut : {bankrollStatus}
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
 
-        <div className="grid grid-2 dashboard-section">
           <div className="card chart-card">
             <h3 className="section-title">Volume mensuel</h3>
             <ResponsiveContainer width="100%" height="88%">
@@ -1066,7 +1143,9 @@ Statut : {bankrollStatus}
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
 
+        <div className="grid grid-2 dashboard-section">
           <div className="card chart-card">
             <h3 className="section-title">ABI mensuel</h3>
             <ResponsiveContainer width="100%" height="88%">
@@ -1084,6 +1163,22 @@ Statut : {bankrollStatus}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="card chart-card">
+            <h3 className="section-title">Graphique profit par room</h3>
+            <ResponsiveContainer width="100%" height="88%">
+              <BarChart data={roomStats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+                <XAxis dataKey="room" stroke="#aab2c5" />
+                <YAxis stroke="#aab2c5" />
+                <Tooltip
+                  formatter={(value) => [`${value} €`, "Profit"]}
+                  labelFormatter={(label) => `Room : ${label}`}
+                />
+                <Bar dataKey="totalProfit" fill="#f5b041" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -1192,22 +1287,6 @@ Statut : {bankrollStatus}
               </ResponsiveContainer>
             </>
           )}
-        </div>
-
-        <div className="card chart-card dashboard-section">
-          <h3 className="section-title">Graphique profit par room</h3>
-          <ResponsiveContainer width="100%" height="88%">
-            <BarChart data={roomStats}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
-              <XAxis dataKey="room" stroke="#aab2c5" />
-              <YAxis stroke="#aab2c5" />
-              <Tooltip
-                formatter={(value) => [`${value} €`, "Profit"]}
-                labelFormatter={(label) => `Room : ${label}`}
-              />
-              <Bar dataKey="totalProfit" fill="#f5b041" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
 
         <div className="grid grid-2 dashboard-section">
