@@ -50,6 +50,7 @@ export default function Home() {
   const [bankrollRuleDown, setBankrollRuleDown] = useState("70")
 
   const [monthlyGoal, setMonthlyGoal] = useState(200)
+  const [monthlyProfitGoal, setMonthlyProfitGoal] = useState(1000)
 
   useEffect(() => {
     async function checkSession() {
@@ -71,6 +72,7 @@ export default function Home() {
       const savedBankrollRuleUp = localStorage.getItem("bankrollRuleUp")
       const savedBankrollRuleDown = localStorage.getItem("bankrollRuleDown")
       const savedMonthlyGoal = localStorage.getItem("monthlyGoal")
+      const savedMonthlyProfitGoal = localStorage.getItem("monthlyProfitGoal")
 
       if (savedBankroll) {
         setStartingBankroll(initialBankroll)
@@ -99,6 +101,10 @@ export default function Home() {
 
       if (savedMonthlyGoal) {
         setMonthlyGoal(Number(savedMonthlyGoal))
+      }
+
+      if (savedMonthlyProfitGoal) {
+        setMonthlyProfitGoal(Number(savedMonthlyProfitGoal))
       }
 
       await fetchStats(initialBankroll, savedRoom || "Toutes")
@@ -444,8 +450,9 @@ export default function Home() {
     localStorage.setItem("bankrollRuleDown", bankrollRuleDown)
   }
 
-  function saveMonthlyGoal() {
+  function saveMonthlyGoals() {
     localStorage.setItem("monthlyGoal", String(monthlyGoal))
+    localStorage.setItem("monthlyProfitGoal", String(monthlyProfitGoal))
   }
 
   const roi =
@@ -498,9 +505,16 @@ export default function Home() {
   const currentMonthKey = formatMonthKey(new Date())
   const currentMonth = monthlyData.find((m) => m.monthKey === currentMonthKey)
   const currentMonthVolume = currentMonth ? currentMonth.volume : 0
-  const goalProgress =
+  const currentMonthProfit = currentMonth ? currentMonth.profit : 0
+
+  const goalProgressVolume =
     monthlyGoal > 0
       ? Math.min((currentMonthVolume / monthlyGoal) * 100, 100).toFixed(1)
+      : "0.0"
+
+  const goalProgressProfit =
+    monthlyProfitGoal > 0
+      ? Math.min((currentMonthProfit / monthlyProfitGoal) * 100, 100).toFixed(1)
       : "0.0"
 
   function getStatusColor(status) {
@@ -746,60 +760,103 @@ export default function Home() {
         </div>
 
         <div className="card dashboard-section" style={{ marginBottom: 20 }}>
-          <h3 className="section-title">Objectif de volume mensuel</h3>
+          <h3 className="section-title">Objectifs mensuels</h3>
           <p className="section-subtitle">
-            Fixe ton objectif de tournois pour le mois en cours.
+            Volume de grind et profit cible pour rester disciplinée.
           </p>
 
-          <div className="actions" style={{ marginBottom: 16 }}>
+          <div className="actions" style={{ marginBottom: 18 }}>
             <input
               className="input"
-              style={{ maxWidth: 180 }}
               type="number"
               value={monthlyGoal}
               onChange={(e) => setMonthlyGoal(Number(e.target.value))}
-              placeholder="Objectif mensuel"
+              placeholder="Objectif tournois"
+              style={{ maxWidth: 160 }}
             />
 
-            <button className="btn" onClick={saveMonthlyGoal}>
-              Sauvegarder l’objectif
+            <input
+              className="input"
+              type="number"
+              value={monthlyProfitGoal}
+              onChange={(e) => setMonthlyProfitGoal(Number(e.target.value))}
+              placeholder="Objectif profit €"
+              style={{ maxWidth: 180 }}
+            />
+
+            <button className="btn" onClick={saveMonthlyGoals}>
+              Sauvegarder
             </button>
           </div>
 
           <div className="grid grid-3">
             <div className="kpi">
-              <div className="kpi-label">Objectif du mois</div>
+              <div className="kpi-label">Objectif volume</div>
               <div className="kpi-value">{monthlyGoal}</div>
               <div className="kpi-meta">tournois</div>
             </div>
 
             <div className="kpi">
-              <div className="kpi-label">Joués ce mois</div>
+              <div className="kpi-label">Volume actuel</div>
               <div className="kpi-value">{currentMonthVolume}</div>
-              <div className="kpi-meta">tournois</div>
+              <div className="kpi-meta">tournois joués</div>
             </div>
 
             <div className="kpi">
               <div className="kpi-label">Progression</div>
-              <div className="kpi-value">{goalProgress} %</div>
+              <div className="kpi-value">{goalProgressVolume}%</div>
             </div>
           </div>
 
           <div
             style={{
-              height: 12,
+              height: 10,
               background: "#1e2330",
               borderRadius: 999,
-              marginTop: 18,
-              overflow: "hidden",
-              border: "1px solid var(--border)"
+              marginTop: 14,
+              overflow: "hidden"
             }}
           >
             <div
               style={{
-                width: `${goalProgress}%`,
+                width: `${goalProgressVolume}%`,
                 height: "100%",
                 background: "linear-gradient(90deg,#6c5ce7,#00d2ff)"
+              }}
+            />
+          </div>
+
+          <div className="grid grid-3" style={{ marginTop: 24 }}>
+            <div className="kpi">
+              <div className="kpi-label">Objectif profit</div>
+              <div className="kpi-value">{monthlyProfitGoal} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Profit actuel</div>
+              <div className="kpi-value">{currentMonthProfit} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Progression</div>
+              <div className="kpi-value">{goalProgressProfit}%</div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              height: 10,
+              background: "#1e2330",
+              borderRadius: 999,
+              marginTop: 14,
+              overflow: "hidden"
+            }}
+          >
+            <div
+              style={{
+                width: `${goalProgressProfit}%`,
+                height: "100%",
+                background: "linear-gradient(90deg,#2ecc71,#00c9a7)"
               }}
             />
           </div>
