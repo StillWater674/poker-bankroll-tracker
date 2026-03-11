@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../lib/supabaseClient"
 import {
   LineChart,
@@ -22,22 +22,30 @@ export default function Home() {
   const [chartData, setChartData] = useState([])
   const [buyinStats, setBuyinStats] = useState([])
   const [roomStats, setRoomStats] = useState([])
+  const [roomChartData, setRoomChartData] = useState([])
+  const [roomOptions, setRoomOptions] = useState([])
+  const [selectedRoom, setSelectedRoom] = useState("Toutes")
   const [startingBankroll, setStartingBankroll] = useState(0)
   const [inputBankroll, setInputBankroll] = useState("")
 
   useEffect(() => {
     const savedBankroll = localStorage.getItem("startingBankroll")
     const initialBankroll = savedBankroll ? Number(savedBankroll) : 0
+    const savedRoom = localStorage.getItem("selectedRoom")
 
     if (savedBankroll) {
       setStartingBankroll(initialBankroll)
       setInputBankroll(savedBankroll)
     }
 
-    fetchStats(initialBankroll)
+    if (savedRoom) {
+      setSelectedRoom(savedRoom)
+    }
+
+    fetchStats(initialBankroll, savedRoom || "Toutes")
   }, [])
 
-  async function fetchStats(baseBankroll = 0) {
+  async function fetchStats(baseBankroll = 0, roomChoice = selectedRoom) {
     const { data: tournoisData, error: tournoisError } = await supabase
       .from("tournois")
       .select("*")
@@ -119,7 +127,7 @@ export default function Home() {
 
     let runningBankroll = Number(baseBankroll) || 0
 
-    const events = [
+    const globalEvents = [
       ...tournois.map((t) => ({
         date: t.date,
         type: "tournoi",
@@ -134,7 +142,7 @@ export default function Home() {
       }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date))
 
-    const chart = events.map((event, index) => {
+    const globalChart = globalEvents.map((event, index) => {
       runningBankroll += event.variation
 
       return {
@@ -166,6 +174,37 @@ export default function Home() {
       }))
       .sort((a, b) => b.totalProfit - a.totalProfit)
 
+    const uniqueRooms = ["Toutes", ...Object.keys(rooms).sort()]
+
+    let filteredRoomChart = []
+
+    if (roomChoice && roomChoice !== "Toutes") {
+      let runningRoomBankroll = Number(baseBankroll) || 0
+
+      const roomTournois = tournois.filter(
+        (t) => (t.room || "Inconnu") === roomChoice
+      )
+
+      const roomEvents = [
+        ...roomTournois.map((t) => ({
+          date: t.date,
+          type: "tournoi",
+          variation: Number(t.profit) || 0
+        }))
+      ].sort((a, b) => new Date(a.date) - new Date(b.date))
+
+      filteredRoomChart = roomEvents.map((event, index) => {
+        runningRoomBankroll += event.variation
+
+        return {
+          id: index + 1,
+          date: event.date,
+          bankroll: runningRoomBankroll,
+          variation: event.variation
+        }
+      })
+    }
+
     setStats({
       profit,
       buyins,
@@ -173,16 +212,25 @@ export default function Home() {
       mouvementsImpact
     })
 
-    setChartData(chart)
+    setChartData(globalChart)
     setBuyinStats(buyinArray)
     setRoomStats(roomArray)
+    setRoomOptions(uniqueRooms)
+    setRoomChartData(filteredRoomChart)
   }
 
   function saveStartingBankroll() {
     const value = Number(inputBankroll) || 0
     localStorage.setItem("startingBankroll", value.toString())
     setStartingBankroll(value)
-    fetchStats(value)
+    fetchStats(value, selectedRoom)
+  }
+
+  function handleRoomChange(e) {
+    const room = e.target.value
+    setSelectedRoom(room)
+    localStorage.setItem("selectedRoom", room)
+    fetchStats(startingBankroll, room)
   }
 
   const roi =
@@ -190,6 +238,10 @@ export default function Home() {
 
   const currentBankroll =
     startingBankroll + stats.profit + stats.mouvementsImpact
+
+  const selectedRoomStats = useMemo(() => {
+    return roomStats.find((r) => r.room === selectedRoom) || null
+  }, [roomStats, selectedRoom])
 
   return (
     <div className="page">
@@ -241,7 +293,7 @@ export default function Home() {
 
         <div className="grid grid-2">
           <div className="card chart-card">
-            <h3 className="section-title">Courbe de bankroll</h3>
+            <h3 className="section-title">Courbe de bankroll globale</h3>
             <ResponsiveContainer width="100%" height="88%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
@@ -299,6 +351,87 @@ export default function Home() {
         </div>
 
         <div className="spacer" />
+
+        <div className="card chart-card" style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 18,
+              flexWrap: "wrap"
+            }}
+          >
+            <h3 className="section-title" style={{ margin: 0 }}>
+              Courbe par room
+            </h3>
+
+            <select
+              className="select"
+              style={{ maxWidth: 240 }}
+              value={selectedRoom}
+              onChange={handleRoomChange}
+            >
+              {roomOptions.map((room) => (
+                <option key={room} value={room}>
+                  {room}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedRoom === "Toutes" ? (
+            <p className="subtitle">
+              Choisis une room pour afficher sa courbe dédiée.
+            </p>
+          ) : (
+            <>
+              {selectedRoomStats && (
+                <div className="grid grid-4" style={{ marginBottom: 18 }}>
+                  <div className="kpi">
+                    <div className="kpi-label">Room</div>
+                    <div className="kpi-value">{selectedRoomStats.room}</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-label">Tournois</div>
+                    <div className="kpi-value">{selectedRoomStats.count}</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-label">Profit</div>
+                    <div className="kpi-value">
+                      {selectedRoomStats.totalProfit} €
+                    </div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-label">ROI</div>
+                    <div className="kpi-value">{selectedRoomStats.roi} %</div>
+                  </div>
+                </div>
+              )}
+
+              <ResponsiveContainer width="100%" height="72%">
+                <LineChart data={roomChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+                  <XAxis dataKey="date" stroke="#aab2c5" />
+                  <YAxis stroke="#aab2c5" />
+                  <Tooltip
+                    formatter={(value) => [`${value} €`, "Bankroll room"]}
+                    labelFormatter={(label) => `Date : ${label}`}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="bankroll"
+                    stroke="#2ecc71"
+                    strokeWidth={3}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </>
+          )}
+        </div>
 
         <div className="card" style={{ marginBottom: 20 }}>
           <h3 className="section-title">Stats par buy-in</h3>
