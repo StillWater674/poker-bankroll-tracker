@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabaseClient"
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -431,6 +433,22 @@ export default function Home() {
               </ResponsiveContainer>
             </>
           )}
+        </div>
+
+        <div className="card chart-card" style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Graphique profit par room</h3>
+          <ResponsiveContainer width="100%" height="88%">
+            <BarChart data={roomStats}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+              <XAxis dataKey="room" stroke="#aab2c5" />
+              <YAxis stroke="#aab2c5" />
+              <Tooltip
+                formatter={(value) => [`${value} €`, "Profit"]}
+                labelFormatter={(label) => `Room : ${label}`}
+              />
+              <Bar dataKey="totalProfit" fill="#f5b041" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="card" style={{ marginBottom: 20 }}>
