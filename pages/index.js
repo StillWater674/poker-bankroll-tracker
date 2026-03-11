@@ -18,7 +18,13 @@ export default function Home() {
     profit: 0,
     buyins: 0,
     count: 0,
-    mouvementsImpact: 0
+    mouvementsImpact: 0,
+    abi: 0,
+    averageProfit: 0,
+    bestRoom: null,
+    worstRoom: null,
+    bestBuyin: null,
+    worstBuyin: null
   })
 
   const [chartData, setChartData] = useState([])
@@ -207,11 +213,33 @@ export default function Home() {
       })
     }
 
+    const abi = tournois.length > 0 ? (buyins / tournois.length).toFixed(2) : "0.00"
+    const averageProfit =
+      tournois.length > 0 ? (profit / tournois.length).toFixed(2) : "0.00"
+
+    const bestRoom = roomArray.length > 0 ? roomArray[0] : null
+    const worstRoom = roomArray.length > 0 ? roomArray[roomArray.length - 1] : null
+
+    const sortedBuyinsByProfit = [...buyinArray].sort(
+      (a, b) => b.totalProfit - a.totalProfit
+    )
+    const bestBuyin = sortedBuyinsByProfit.length > 0 ? sortedBuyinsByProfit[0] : null
+    const worstBuyin =
+      sortedBuyinsByProfit.length > 0
+        ? sortedBuyinsByProfit[sortedBuyinsByProfit.length - 1]
+        : null
+
     setStats({
       profit,
       buyins,
       count: tournois.length,
-      mouvementsImpact
+      mouvementsImpact,
+      abi,
+      averageProfit,
+      bestRoom,
+      worstRoom,
+      bestBuyin,
+      worstBuyin
     })
 
     setChartData(globalChart)
@@ -290,6 +318,55 @@ export default function Home() {
           <div className="kpi">
             <div className="kpi-label">ROI global</div>
             <div className="kpi-value">{roi} %</div>
+          </div>
+        </div>
+
+        <div className="grid grid-4" style={{ marginBottom: 22 }}>
+          <div className="kpi">
+            <div className="kpi-label">ABI</div>
+            <div className="kpi-value">{stats.abi} €</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Profit moyen / tournoi</div>
+            <div className="kpi-value">{stats.averageProfit} €</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Meilleure room</div>
+            <div className="kpi-value">
+              {stats.bestRoom ? stats.bestRoom.room : "-"}
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Pire room</div>
+            <div className="kpi-value">
+              {stats.worstRoom ? stats.worstRoom.room : "-"}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-2" style={{ marginBottom: 22 }}>
+          <div className="kpi">
+            <div className="kpi-label">Meilleur buy-in</div>
+            <div className="kpi-value">
+              {stats.bestBuyin ? `${stats.bestBuyin.buyin} €` : "-"}
+            </div>
+            {stats.bestBuyin && (
+              <p className="subtitle" style={{ marginTop: 8 }}>
+                Profit : {stats.bestBuyin.totalProfit} € | ROI : {stats.bestBuyin.roi} %
+              </p>
+            )}
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">Pire buy-in</div>
+            <div className="kpi-value">
+              {stats.worstBuyin ? `${stats.worstBuyin.buyin} €` : "-"}
+            </div>
+            {stats.worstBuyin && (
+              <p className="subtitle" style={{ marginTop: 8 }}>
+                Profit : {stats.worstBuyin.totalProfit} € | ROI : {stats.worstBuyin.roi} %
+              </p>
+            )}
           </div>
         </div>
 
