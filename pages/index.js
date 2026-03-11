@@ -64,18 +64,20 @@ export default function Home() {
     let profit = 0
     let buyins = 0
     const grouped = {}
+    const rooms = {}
 
     tournois.forEach((t) => {
       const tournoiProfit = Number(t.profit) || 0
       const tournoiBuyin = Number(t.buyin) || 0
+      const room = t.room || "Inconnu"
 
       profit += tournoiProfit
       buyins += tournoiBuyin
 
-      const key = tournoiBuyin.toString()
+      const buyinKey = tournoiBuyin.toString()
 
-      if (!grouped[key]) {
-        grouped[key] = {
+      if (!grouped[buyinKey]) {
+        grouped[buyinKey] = {
           buyin: tournoiBuyin,
           count: 0,
           totalProfit: 0,
@@ -83,17 +85,9 @@ export default function Home() {
         }
       }
 
-      grouped[key].count += 1
-      grouped[key].totalProfit += tournoiProfit
-      grouped[key].totalBuyins += tournoiBuyin
-    })
-
-    const rooms = {}
-
-    tournois.forEach((t) => {
-      const room = t.room || "Inconnu"
-      const tournoiProfit = Number(t.profit) || 0
-      const tournoiBuyin = Number(t.buyin) || 0
+      grouped[buyinKey].count += 1
+      grouped[buyinKey].totalProfit += tournoiProfit
+      grouped[buyinKey].totalBuyins += tournoiBuyin
 
       if (!rooms[room]) {
         rooms[room] = {
@@ -140,12 +134,15 @@ export default function Home() {
       }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date))
 
-    const chart = events.map((event) => {
+    const chart = events.map((event, index) => {
       runningBankroll += event.variation
 
       return {
+        id: index + 1,
         date: event.date,
-        bankroll: runningBankroll
+        bankroll: runningBankroll,
+        variation: event.variation,
+        type: event.type
       }
     })
 
@@ -250,12 +247,17 @@ export default function Home() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
                 <XAxis dataKey="date" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
-                <Tooltip />
+                <Tooltip
+                  formatter={(value) => [`${value} €`, "Bankroll"]}
+                  labelFormatter={(label) => `Date : ${label}`}
+                />
                 <Line
                   type="monotone"
                   dataKey="bankroll"
                   stroke="#8b7cf6"
                   strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
