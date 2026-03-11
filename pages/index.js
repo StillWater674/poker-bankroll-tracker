@@ -153,7 +153,9 @@ export default function Home() {
           label: formatMonthLabel(monthKey),
           profit: 0,
           volume: 0,
-          buyins: 0
+          buyins: 0,
+          abi: 0,
+          averageProfit: 0
         }
       }
 
@@ -210,7 +212,11 @@ export default function Home() {
       .map((item) => ({
         ...item,
         roi:
-          item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0"
+          item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0",
+        abi:
+          item.volume > 0 ? (item.buyins / item.volume).toFixed(2) : "0.00",
+        averageProfit:
+          item.volume > 0 ? (item.profit / item.volume).toFixed(2) : "0.00"
       }))
 
     const buyinArray = Object.values(grouped)
@@ -244,13 +250,13 @@ export default function Home() {
         (t) => (t.room || "Inconnu") === roomChoice
       )
 
-      const roomEvents = [
-        ...roomTournois.map((t) => ({
+      const roomEvents = roomTournois
+        .map((t) => ({
           date: t.date,
           type: "tournoi",
           variation: Number(t.profit) || 0
         }))
-      ].sort((a, b) => new Date(a.date) - new Date(b.date))
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
 
       filteredRoomChart = roomEvents.map((event, index) => {
         runningRoomBankroll += event.variation
@@ -483,21 +489,51 @@ export default function Home() {
 
         <div className="spacer" />
 
+        <div className="grid grid-2" style={{ marginBottom: 20 }}>
+          <div className="card chart-card">
+            <h3 className="section-title">Graphique mensuel</h3>
+            <ResponsiveContainer width="100%" height="88%">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+                <XAxis dataKey="label" stroke="#aab2c5" />
+                <YAxis stroke="#aab2c5" />
+                <Tooltip formatter={(value) => [`${value} €`, "Profit mensuel"]} />
+                <Bar dataKey="profit" fill="#4ea8de" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="card chart-card">
+            <h3 className="section-title">Volume mensuel</h3>
+            <ResponsiveContainer width="100%" height="88%">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+                <XAxis dataKey="label" stroke="#aab2c5" />
+                <YAxis stroke="#aab2c5" />
+                <Tooltip formatter={(value) => [value, "Tournois"]} />
+                <Bar dataKey="volume" fill="#2ecc71" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         <div className="card chart-card" style={{ marginBottom: 20 }}>
-          <h3 className="section-title">Graphique mensuel</h3>
+          <h3 className="section-title">ABI mensuel</h3>
           <ResponsiveContainer width="100%" height="88%">
-            <BarChart data={monthlyData}>
+            <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
               <XAxis dataKey="label" stroke="#aab2c5" />
               <YAxis stroke="#aab2c5" />
-              <Tooltip
-                formatter={(value, name, props) => {
-                  if (name === "profit") return [`${value} €`, "Profit mensuel"]
-                  return [value, name]
-                }}
+              <Tooltip formatter={(value) => [`${value} €`, "ABI mensuel"]} />
+              <Line
+                type="monotone"
+                dataKey="abi"
+                stroke="#f5b041"
+                strokeWidth={3}
+                dot={{ r: 3 }}
+                activeDot={{ r: 6 }}
               />
-              <Bar dataKey="profit" fill="#4ea8de" radius={[8, 8, 0, 0]} />
-            </BarChart>
+            </LineChart>
           </ResponsiveContainer>
         </div>
 
