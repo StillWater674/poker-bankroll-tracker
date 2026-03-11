@@ -34,6 +34,7 @@ export default function Home() {
   const [roomChartData, setRoomChartData] = useState([])
   const [roomOptions, setRoomOptions] = useState([])
   const [selectedRoom, setSelectedRoom] = useState("Toutes")
+  const [weekdayStats, setWeekdayStats] = useState([])
   const [startingBankroll, setStartingBankroll] = useState(0)
   const [inputBankroll, setInputBankroll] = useState("")
 
@@ -80,6 +81,20 @@ export default function Home() {
     return `${monthNames[Number(month) - 1]} ${year}`
   }
 
+  function getFrenchWeekday(dateString) {
+    const d = new Date(dateString)
+    const dayNames = [
+      "Dimanche",
+      "Lundi",
+      "Mardi",
+      "Mercredi",
+      "Jeudi",
+      "Vendredi",
+      "Samedi"
+    ]
+    return dayNames[d.getDay()]
+  }
+
   async function fetchStats(baseBankroll = 0, roomChoice = selectedRoom) {
     const { data: tournoisData, error: tournoisError } = await supabase
       .from("tournois")
@@ -109,12 +124,22 @@ export default function Home() {
     const grouped = {}
     const rooms = {}
     const months = {}
+    const weekdays = {
+      Lundi: { day: "Lundi", count: 0, profit: 0, buyins: 0 },
+      Mardi: { day: "Mardi", count: 0, profit: 0, buyins: 0 },
+      Mercredi: { day: "Mercredi", count: 0, profit: 0, buyins: 0 },
+      Jeudi: { day: "Jeudi", count: 0, profit: 0, buyins: 0 },
+      Vendredi: { day: "Vendredi", count: 0, profit: 0, buyins: 0 },
+      Samedi: { day: "Samedi", count: 0, profit: 0, buyins: 0 },
+      Dimanche: { day: "Dimanche", count: 0, profit: 0, buyins: 0 }
+    }
 
     tournois.forEach((t) => {
       const tournoiProfit = Number(t.profit) || 0
       const tournoiBuyin = Number(t.buyin) || 0
       const room = t.room || "Inconnu"
       const monthKey = formatMonthKey(t.date)
+      const weekday = getFrenchWeekday(t.date)
 
       profit += tournoiProfit
       buyins += tournoiBuyin
@@ -162,6 +187,10 @@ export default function Home() {
       months[monthKey].profit += tournoiProfit
       months[monthKey].volume += 1
       months[monthKey].buyins += tournoiBuyin
+
+      weekdays[weekday].count += 1
+      weekdays[weekday].profit += tournoiProfit
+      weekdays[weekday].buyins += tournoiBuyin
     })
 
     let mouvementsImpact = 0
@@ -239,6 +268,27 @@ export default function Home() {
       }))
       .sort((a, b) => b.totalProfit - a.totalProfit)
 
+    const weekdayOrder = [
+      "Lundi",
+      "Mardi",
+      "Mercredi",
+      "Jeudi",
+      "Vendredi",
+      "Samedi",
+      "Dimanche"
+    ]
+
+    const weekdayArray = weekdayOrder.map((day) => {
+      const item = weekdays[day]
+      const roi =
+        item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0"
+
+      return {
+        ...item,
+        roi
+      }
+    })
+
     const uniqueRooms = ["Toutes", ...Object.keys(rooms).sort()]
 
     let filteredRoomChart = []
@@ -305,6 +355,7 @@ export default function Home() {
     setRoomStats(roomArray)
     setRoomOptions(uniqueRooms)
     setRoomChartData(filteredRoomChart)
+    setWeekdayStats(weekdayArray)
   }
 
   function saveStartingBankroll() {
@@ -330,6 +381,27 @@ export default function Home() {
   const selectedRoomStats = useMemo(() => {
     return roomStats.find((r) => r.room === selectedRoom) || null
   }, [roomStats, selectedRoom])
+
+  function getHeatmapStyle(item) {
+    if (item.profit > 0) {
+      return {
+        background: "linear-gradient(180deg, rgba(46,204,113,0.22) 0%, rgba(46,204,113,0.12) 100%)",
+        border: "1px solid rgba(46,204,113,0.45)"
+      }
+    }
+
+    if (item.profit < 0) {
+      return {
+        background: "linear-gradient(180deg, rgba(255,107,107,0.22) 0%, rgba(255,107,107,0.12) 100%)",
+        border: "1px solid rgba(255,107,107,0.45)"
+      }
+    }
+
+    return {
+      background: "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
+      border: "1px solid var(--border)"
+    }
+  }
 
   return (
     <div className="page">
@@ -535,6 +607,46 @@ export default function Home() {
               />
             </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Heatmap des jours gagnants</h3>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 14
+            }}
+          >
+            {weekdayStats.map((item) => (
+              <div
+                key={item.day}
+                className="card"
+                style={{
+                  padding: 16,
+                  ...getHeatmapStyle(item)
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 10 }}>{item.day}</div>
+                <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 6 }}>
+                  Tournois : {item.count}
+                </div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    marginBottom: 6,
+                    color: item.profit >= 0 ? "#62d394" : "#ff8b8b"
+                  }}
+                >
+                  {item.profit} €
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: 14 }}>
+                  ROI : {item.roi} %
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="card chart-card" style={{ marginBottom: 20 }}>
