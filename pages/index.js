@@ -49,6 +49,8 @@ export default function Home() {
   const [bankrollRuleUp, setBankrollRuleUp] = useState("100")
   const [bankrollRuleDown, setBankrollRuleDown] = useState("70")
 
+  const [monthlyGoal, setMonthlyGoal] = useState(200)
+
   useEffect(() => {
     async function checkSession() {
       const { data } = await supabase.auth.getSession()
@@ -68,6 +70,7 @@ export default function Home() {
       const savedTargetBuyin = localStorage.getItem("targetBuyin")
       const savedBankrollRuleUp = localStorage.getItem("bankrollRuleUp")
       const savedBankrollRuleDown = localStorage.getItem("bankrollRuleDown")
+      const savedMonthlyGoal = localStorage.getItem("monthlyGoal")
 
       if (savedBankroll) {
         setStartingBankroll(initialBankroll)
@@ -94,6 +97,10 @@ export default function Home() {
         setBankrollRuleDown(savedBankrollRuleDown)
       }
 
+      if (savedMonthlyGoal) {
+        setMonthlyGoal(Number(savedMonthlyGoal))
+      }
+
       await fetchStats(initialBankroll, savedRoom || "Toutes")
       setSessionChecked(true)
     }
@@ -101,8 +108,8 @@ export default function Home() {
     checkSession()
   }, [router])
 
-  function formatMonthKey(dateString) {
-    const d = new Date(dateString)
+  function formatMonthKey(dateInput) {
+    const d = new Date(dateInput)
     const year = d.getFullYear()
     const month = String(d.getMonth() + 1).padStart(2, "0")
     return `${year}-${month}`
@@ -437,6 +444,10 @@ export default function Home() {
     localStorage.setItem("bankrollRuleDown", bankrollRuleDown)
   }
 
+  function saveMonthlyGoal() {
+    localStorage.setItem("monthlyGoal", String(monthlyGoal))
+  }
+
   const roi =
     stats.buyins > 0 ? ((stats.profit / stats.buyins) * 100).toFixed(1) : 0
 
@@ -484,6 +495,14 @@ export default function Home() {
     bankrollStatus = "Attention"
   }
 
+  const currentMonthKey = formatMonthKey(new Date())
+  const currentMonth = monthlyData.find((m) => m.monthKey === currentMonthKey)
+  const currentMonthVolume = currentMonth ? currentMonth.volume : 0
+  const goalProgress =
+    monthlyGoal > 0
+      ? Math.min((currentMonthVolume / monthlyGoal) * 100, 100).toFixed(1)
+      : "0.0"
+
   function getStatusColor(status) {
     if (status === "Prête à monter") return "#62d394"
     if (status === "Presque prête") return "#f5b041"
@@ -512,7 +531,7 @@ export default function Home() {
     return {
       background:
         "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
-        border: "1px solid var(--border)"
+      border: "1px solid var(--border)"
     }
   }
 
@@ -723,6 +742,66 @@ export default function Home() {
               <div className="kpi-label">Conseil automatique</div>
               <div className="kpi-value">{recommendation}</div>
             </div>
+          </div>
+        </div>
+
+        <div className="card dashboard-section" style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Objectif de volume mensuel</h3>
+          <p className="section-subtitle">
+            Fixe ton objectif de tournois pour le mois en cours.
+          </p>
+
+          <div className="actions" style={{ marginBottom: 16 }}>
+            <input
+              className="input"
+              style={{ maxWidth: 180 }}
+              type="number"
+              value={monthlyGoal}
+              onChange={(e) => setMonthlyGoal(Number(e.target.value))}
+              placeholder="Objectif mensuel"
+            />
+
+            <button className="btn" onClick={saveMonthlyGoal}>
+              Sauvegarder l’objectif
+            </button>
+          </div>
+
+          <div className="grid grid-3">
+            <div className="kpi">
+              <div className="kpi-label">Objectif du mois</div>
+              <div className="kpi-value">{monthlyGoal}</div>
+              <div className="kpi-meta">tournois</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Joués ce mois</div>
+              <div className="kpi-value">{currentMonthVolume}</div>
+              <div className="kpi-meta">tournois</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Progression</div>
+              <div className="kpi-value">{goalProgress} %</div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              height: 12,
+              background: "#1e2330",
+              borderRadius: 999,
+              marginTop: 18,
+              overflow: "hidden",
+              border: "1px solid var(--border)"
+            }}
+          >
+            <div
+              style={{
+                width: `${goalProgress}%`,
+                height: "100%",
+                background: "linear-gradient(90deg,#6c5ce7,#00d2ff)"
+              }}
+            />
           </div>
         </div>
 
