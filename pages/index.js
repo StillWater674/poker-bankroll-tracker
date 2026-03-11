@@ -280,12 +280,12 @@ export default function Home() {
 
     const weekdayArray = weekdayOrder.map((day) => {
       const item = weekdays[day]
-      const roi =
+      const dayRoi =
         item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0"
 
       return {
         ...item,
-        roi
+        roi: dayRoi
       }
     })
 
@@ -385,15 +385,15 @@ export default function Home() {
   function getHeatmapStyle(item) {
     if (item.profit > 0) {
       return {
-        background: "linear-gradient(180deg, rgba(46,204,113,0.22) 0%, rgba(46,204,113,0.12) 100%)",
-        border: "1px solid rgba(46,204,113,0.45)"
+        background: "linear-gradient(180deg, rgba(46,204,113,0.20) 0%, rgba(46,204,113,0.10) 100%)",
+        border: "1px solid rgba(46,204,113,0.40)"
       }
     }
 
     if (item.profit < 0) {
       return {
-        background: "linear-gradient(180deg, rgba(255,107,107,0.22) 0%, rgba(255,107,107,0.12) 100%)",
-        border: "1px solid rgba(255,107,107,0.45)"
+        background: "linear-gradient(180deg, rgba(255,107,107,0.20) 0%, rgba(255,107,107,0.10) 100%)",
+        border: "1px solid rgba(255,107,107,0.40)"
       }
     }
 
@@ -406,16 +406,60 @@ export default function Home() {
   return (
     <div className="page">
       <div className="container">
-        <div className="hero">
-          <div>
-            <h1 className="title">Poker Tracker</h1>
-            <p className="subtitle">
-              Ton cockpit bankroll, résultats et performance.
-            </p>
+        <div className="topbar">
+          <div className="brand">
+            <div className="brand-mark">PT</div>
+            <div className="brand-text">
+              <div className="brand-title">Poker Tracker</div>
+              <div className="brand-subtitle">Dashboard premium de grind</div>
+            </div>
+          </div>
+
+          <div className="actions">
+            <Link href="/add">
+              <button className="btn">Ajouter un tournoi</button>
+            </Link>
+            <Link href="/history">
+              <button className="btn btn-secondary">Historique</button>
+            </Link>
           </div>
         </div>
 
-        <div className="card" style={{ marginBottom: 20 }}>
+        <div className="hero">
+          <div className="hero-grid">
+            <div>
+              <h1 className="hero-title">Ton cockpit bankroll, room, volume et ROI.</h1>
+              <p className="hero-subtitle">
+                Lis ta progression comme une joueuse sérieuse : courbes, ABI, profit par room,
+                rythme mensuel et jours les plus rentables.
+              </p>
+
+              <div className="hero-badges">
+                <div className="badge">Bankroll réelle</div>
+                <div className="badge">ROI global</div>
+                <div className="badge">Analyse par room</div>
+                <div className="badge">Volume mensuel</div>
+              </div>
+            </div>
+
+            <div className="hero-side">
+              <div className="hero-side-card">
+                <div className="hero-side-label">Bankroll actuelle</div>
+                <div className="hero-side-value">{currentBankroll} €</div>
+              </div>
+              <div className="hero-side-card">
+                <div className="hero-side-label">Profit total</div>
+                <div className="hero-side-value">{stats.profit} €</div>
+              </div>
+              <div className="hero-side-card">
+                <div className="hero-side-label">ROI global</div>
+                <div className="hero-side-value">{roi} %</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="dashboard-section card" style={{ marginBottom: 20 }}>
           <h3 className="section-title">Bankroll de départ</h3>
           <div className="actions">
             <input
@@ -429,61 +473,83 @@ export default function Home() {
             <button className="btn" onClick={saveStartingBankroll}>
               Enregistrer
             </button>
+            <Link href="/movements-add">
+              <button className="btn btn-secondary">Ajouter un mouvement</button>
+            </Link>
+            <Link href="/movements-history">
+              <button className="btn btn-secondary">Historique mouvements</button>
+            </Link>
           </div>
         </div>
 
-        <div className="grid grid-4" style={{ marginBottom: 22 }}>
+        <div className="grid grid-4 dashboard-section">
           <div className="kpi">
             <div className="kpi-label">Bankroll actuelle</div>
             <div className="kpi-value">{currentBankroll} €</div>
+            <div className="kpi-meta">Inclut bankroll de départ + résultats + mouvements</div>
           </div>
-          <div className="kpi">
-            <div className="kpi-label">Profit total</div>
-            <div className="kpi-value">{stats.profit} €</div>
-          </div>
+
           <div className="kpi">
             <div className="kpi-label">Impact des mouvements</div>
             <div className="kpi-value">{stats.mouvementsImpact} €</div>
+            <div className="kpi-meta">Dépôts, retraits, cashout, dépenses</div>
           </div>
-          <div className="kpi">
-            <div className="kpi-label">ROI global</div>
-            <div className="kpi-value">{roi} %</div>
-          </div>
-        </div>
 
-        <div className="grid grid-4" style={{ marginBottom: 22 }}>
           <div className="kpi">
             <div className="kpi-label">ABI</div>
             <div className="kpi-value">{stats.abi} €</div>
+            <div className="kpi-meta">Average Buy-In global</div>
           </div>
+
           <div className="kpi">
             <div className="kpi-label">Profit moyen / tournoi</div>
             <div className="kpi-value">{stats.averageProfit} €</div>
-          </div>
-          <div className="kpi">
-            <div className="kpi-label">Meilleure room</div>
-            <div className="kpi-value">
-              {stats.bestRoom ? stats.bestRoom.room : "-"}
-            </div>
-          </div>
-          <div className="kpi">
-            <div className="kpi-label">Pire room</div>
-            <div className="kpi-value">
-              {stats.worstRoom ? stats.worstRoom.room : "-"}
-            </div>
+            <div className="kpi-meta">Moyenne de gain ou perte par entrée</div>
           </div>
         </div>
 
-        <div className="grid grid-2" style={{ marginBottom: 22 }}>
+        <div className="grid grid-4 dashboard-section">
+          <div className="kpi">
+            <div className="kpi-label">Tournois joués</div>
+            <div className="kpi-value">{stats.count}</div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">Buy-ins totaux</div>
+            <div className="kpi-value">{stats.buyins} €</div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">Meilleure room</div>
+            <div className="kpi-value">{stats.bestRoom ? stats.bestRoom.room : "-"}</div>
+            {stats.bestRoom && (
+              <div className="kpi-meta">
+                Profit {stats.bestRoom.totalProfit} € • ROI {stats.bestRoom.roi} %
+              </div>
+            )}
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-label">Pire room</div>
+            <div className="kpi-value">{stats.worstRoom ? stats.worstRoom.room : "-"}</div>
+            {stats.worstRoom && (
+              <div className="kpi-meta">
+                Profit {stats.worstRoom.totalProfit} € • ROI {stats.worstRoom.roi} %
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-2 dashboard-section">
           <div className="kpi">
             <div className="kpi-label">Meilleur buy-in</div>
             <div className="kpi-value">
               {stats.bestBuyin ? `${stats.bestBuyin.buyin} €` : "-"}
             </div>
             {stats.bestBuyin && (
-              <p className="subtitle" style={{ marginTop: 8 }}>
-                Profit : {stats.bestBuyin.totalProfit} € | ROI : {stats.bestBuyin.roi} %
-              </p>
+              <div className="kpi-meta">
+                Profit {stats.bestBuyin.totalProfit} € • ROI {stats.bestBuyin.roi} %
+              </div>
             )}
           </div>
 
@@ -493,14 +559,14 @@ export default function Home() {
               {stats.worstBuyin ? `${stats.worstBuyin.buyin} €` : "-"}
             </div>
             {stats.worstBuyin && (
-              <p className="subtitle" style={{ marginTop: 8 }}>
-                Profit : {stats.worstBuyin.totalProfit} € | ROI : {stats.worstBuyin.roi} %
-              </p>
+              <div className="kpi-meta">
+                Profit {stats.worstBuyin.totalProfit} € • ROI {stats.worstBuyin.roi} %
+              </div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-2">
+        <div className="grid grid-2 dashboard-section">
           <div className="card chart-card">
             <h3 className="section-title">Courbe de bankroll globale</h3>
             <ResponsiveContainer width="100%" height="88%">
@@ -524,44 +590,6 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
 
-          <div className="card">
-            <h3 className="section-title">Vue rapide</h3>
-            <div className="grid" style={{ gap: 14 }}>
-              <div className="kpi">
-                <div className="kpi-label">Buy-ins totaux</div>
-                <div className="kpi-value">{stats.buyins} €</div>
-              </div>
-              <div className="kpi">
-                <div className="kpi-label">Tournois joués</div>
-                <div className="kpi-value">{stats.count}</div>
-              </div>
-            </div>
-
-            <div className="spacer" />
-
-            <div className="actions">
-              <Link href="/add">
-                <button className="btn">Ajouter un tournoi</button>
-              </Link>
-
-              <Link href="/history">
-                <button className="btn btn-secondary">Historique tournois</button>
-              </Link>
-
-              <Link href="/movements-add">
-                <button className="btn btn-secondary">Ajouter un mouvement</button>
-              </Link>
-
-              <Link href="/movements-history">
-                <button className="btn btn-secondary">Historique mouvements</button>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="spacer" />
-
-        <div className="grid grid-2" style={{ marginBottom: 20 }}>
           <div className="card chart-card">
             <h3 className="section-title">Graphique mensuel</h3>
             <ResponsiveContainer width="100%" height="88%">
@@ -574,7 +602,9 @@ export default function Home() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
 
+        <div className="grid grid-2 dashboard-section">
           <div className="card chart-card">
             <h3 className="section-title">Volume mensuel</h3>
             <ResponsiveContainer width="100%" height="88%">
@@ -587,69 +617,56 @@ export default function Home() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
+          <div className="card chart-card">
+            <h3 className="section-title">ABI mensuel</h3>
+            <ResponsiveContainer width="100%" height="88%">
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+                <XAxis dataKey="label" stroke="#aab2c5" />
+                <YAxis stroke="#aab2c5" />
+                <Tooltip formatter={(value) => [`${value} €`, "ABI mensuel"]} />
+                <Line
+                  type="monotone"
+                  dataKey="abi"
+                  stroke="#f5b041"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="card chart-card" style={{ marginBottom: 20 }}>
-          <h3 className="section-title">ABI mensuel</h3>
-          <ResponsiveContainer width="100%" height="88%">
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
-              <XAxis dataKey="label" stroke="#aab2c5" />
-              <YAxis stroke="#aab2c5" />
-              <Tooltip formatter={(value) => [`${value} €`, "ABI mensuel"]} />
-              <Line
-                type="monotone"
-                dataKey="abi"
-                stroke="#f5b041"
-                strokeWidth={3}
-                dot={{ r: 3 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card dashboard-section">
           <h3 className="section-title">Heatmap des jours gagnants</h3>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 14
-            }}
-          >
+          <p className="section-subtitle">
+            Repère en un coup d’œil les jours où ton grind est le plus rentable.
+          </p>
+
+          <div className="heatmap-grid">
             {weekdayStats.map((item) => (
               <div
                 key={item.day}
-                className="card"
-                style={{
-                  padding: 16,
-                  ...getHeatmapStyle(item)
-                }}
+                className="heatmap-card"
+                style={getHeatmapStyle(item)}
               >
-                <div style={{ fontWeight: 700, marginBottom: 10 }}>{item.day}</div>
-                <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 6 }}>
-                  Tournois : {item.count}
-                </div>
+                <div className="heatmap-day">{item.day}</div>
+                <div className="heatmap-meta">Tournois : {item.count}</div>
                 <div
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    marginBottom: 6,
-                    color: item.profit >= 0 ? "#62d394" : "#ff8b8b"
-                  }}
+                  className="heatmap-profit"
+                  style={{ color: item.profit >= 0 ? "#62d394" : "#ff8b8b" }}
                 >
                   {item.profit} €
                 </div>
-                <div style={{ color: "var(--muted)", fontSize: 14 }}>
-                  ROI : {item.roi} %
-                </div>
+                <div className="heatmap-meta">ROI : {item.roi} %</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="card chart-card" style={{ marginBottom: 20 }}>
+        <div className="card chart-card dashboard-section">
           <div
             style={{
               display: "flex",
@@ -679,7 +696,7 @@ export default function Home() {
           </div>
 
           {selectedRoom === "Toutes" ? (
-            <p className="subtitle">
+            <p className="section-subtitle">
               Choisis une room pour afficher sa courbe dédiée.
             </p>
           ) : (
@@ -696,9 +713,7 @@ export default function Home() {
                   </div>
                   <div className="kpi">
                     <div className="kpi-label">Profit</div>
-                    <div className="kpi-value">
-                      {selectedRoomStats.totalProfit} €
-                    </div>
+                    <div className="kpi-value">{selectedRoomStats.totalProfit} €</div>
                   </div>
                   <div className="kpi">
                     <div className="kpi-label">ROI</div>
@@ -730,7 +745,7 @@ export default function Home() {
           )}
         </div>
 
-        <div className="card chart-card" style={{ marginBottom: 20 }}>
+        <div className="card chart-card dashboard-section">
           <h3 className="section-title">Graphique profit par room</h3>
           <ResponsiveContainer width="100%" height="88%">
             <BarChart data={roomStats}>
@@ -746,59 +761,61 @@ export default function Home() {
           </ResponsiveContainer>
         </div>
 
-        <div className="card" style={{ marginBottom: 20 }}>
-          <h3 className="section-title">Stats par buy-in</h3>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Buy-in</th>
-                  <th>Tournois</th>
-                  <th>Profit total</th>
-                  <th>ROI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {buyinStats.map((item) => (
-                  <tr key={item.buyin}>
-                    <td>{item.buyin} €</td>
-                    <td>{item.count}</td>
-                    <td className={item.totalProfit >= 0 ? "stat-positive" : "stat-negative"}>
-                      {item.totalProfit} €
-                    </td>
-                    <td>{item.roi} %</td>
+        <div className="grid grid-2 dashboard-section">
+          <div className="card">
+            <h3 className="section-title">Stats par buy-in</h3>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Buy-in</th>
+                    <th>Tournois</th>
+                    <th>Profit total</th>
+                    <th>ROI</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {buyinStats.map((item) => (
+                    <tr key={item.buyin}>
+                      <td>{item.buyin} €</td>
+                      <td>{item.count}</td>
+                      <td className={item.totalProfit >= 0 ? "stat-positive" : "stat-negative"}>
+                        {item.totalProfit} €
+                      </td>
+                      <td>{item.roi} %</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        <div className="card">
-          <h3 className="section-title">Profit par room</h3>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Room</th>
-                  <th>Tournois</th>
-                  <th>Profit total</th>
-                  <th>ROI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roomStats.map((item) => (
-                  <tr key={item.room}>
-                    <td>{item.room}</td>
-                    <td>{item.count}</td>
-                    <td className={item.totalProfit >= 0 ? "stat-positive" : "stat-negative"}>
-                      {item.totalProfit} €
-                    </td>
-                    <td>{item.roi} %</td>
+          <div className="card">
+            <h3 className="section-title">Profit par room</h3>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Room</th>
+                    <th>Tournois</th>
+                    <th>Profit total</th>
+                    <th>ROI</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {roomStats.map((item) => (
+                    <tr key={item.room}>
+                      <td>{item.room}</td>
+                      <td>{item.count}</td>
+                      <td className={item.totalProfit >= 0 ? "stat-positive" : "stat-negative"}>
+                        {item.totalProfit} €
+                      </td>
+                      <td>{item.roi} %</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
