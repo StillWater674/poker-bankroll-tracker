@@ -1,9 +1,21 @@
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/router"
 import { supabase } from "../lib/supabaseClient"
 
-export default function History() {
+export default function HistoryPage() {
+  const router = useRouter()
+
+  const [sessionChecked, setSessionChecked] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+
   const [tournois, setTournois] = useState([])
+  const [filteredTournois, setFilteredTournois] = useState([])
+
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [roomFilter, setRoomFilter] = useState("")
+
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({
     date: "",
@@ -13,56 +25,64 @@ export default function History() {
     position: ""
   })
 
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    room: ""
-  })
-
   useEffect(() => {
-    fetchTournois()
-  }, [])
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession()
+      const session = data.session
 
-  async function fetchTournois(customFilters = filters) {
-    let query = supabase
+      if (!session) {
+        router.push("/login")
+        return
+      }
+
+      setCurrentUser(session.user)
+      await fetchTournois()
+      setSessionChecked(true)
+    }
+
+    checkSession()
+  }, [router])
+
+  async function fetchTournois() {
+    const { data, error } = await supabase
       .from("tournois")
       .select("*")
       .order("date", { ascending: false })
 
-    if (customFilters.startDate) {
-      query = query.gte("date", customFilters.startDate)
-    }
-
-    if (customFilters.endDate) {
-      query = query.lte("date", customFilters.endDate)
-    }
-
-    if (customFilters.room) {
-      query = query.ilike("room", `%${customFilters.room}%`)
-    }
-
-    const { data, error } = await query
-
     if (error) {
-      alert("Erreur chargement historique : " + error.message)
+      alert(error.message)
       return
     }
 
     setTournois(data || [])
+    setFilteredTournois(data || [])
   }
 
-  async function deleteTournoi(id) {
-    const confirmDelete = window.confirm("Supprimer ce tournoi ?")
-    if (!confirmDelete) return
+  function applyFilters() {
+    let result = [...tournois]
 
-    const { error } = await supabase.from("tournois").delete().eq("id", id)
-
-    if (error) {
-      alert("Erreur suppression : " + error.message)
-      return
+    if (dateFrom) {
+      result = result.filter((t) => t.date >= dateFrom)
     }
 
-    fetchTournois()
+    if (dateTo) {
+      result = result.filter((t) => t.date <= dateTo)
+    }
+
+    if (roomFilter.trim()) {
+      result = result.filter((t) =>
+        (t.room || "").toLowerCase().includes(roomFilter.trim().toLowerCase())
+      )
+    }
+
+    setFilteredTournois(result)
+  }
+
+  function resetFilters() {
+    setDateFrom("")
+    setDateTo("")
+    setRoomFilter("")
+    setFilteredTournois(tournois)
   }
 
   function startEdit(t) {
@@ -70,9 +90,9 @@ export default function History() {
     setEditForm({
       date: t.date || "",
       room: t.room || "",
-      buyin: t.buyin || "",
-      gains: t.gains || "",
-      position: t.position || ""
+      buyin: t.buyin ?? "",
+      gains: t.gains ?? "",
+      position: t.position ?? ""
     })
   }
 
@@ -88,259 +108,329 @@ export default function History() {
   }
 
   async function saveEdit(id) {
-    const buyin = Number(editForm.buyin)
-    const gains = Number(editForm.gains)
-    const profit = gains - buyin
+    const buyinNumber = Number(editForm.buyin) || 0
+    const gainsNumber = Number(editForm.gains) || 0
+    const profit = gainsNumber - buyinNumber
 
     const { error } = await supabase
       .from("tournois")
       .update({
         date: editForm.date,
         room: editForm.room,
-        buyin,
-        gains,
+        buyin: buyinNumber,
+        gains: gainsNumber,
         profit,
-        position: Number(editForm.position)
+        position: editForm.position ? Number(editForm.position) : null
       })
       .eq("id", id)
 
     if (error) {
-      alert("Erreur modification : " + error.message)
+      alert(error.message)
       return
     }
 
     cancelEdit()
-    fetchTournois()
+    await fetchTournois()
   }
 
-  function exportCSV() {
-    if (!tournois.length) {
-      alert("Aucune donnée à exporter")
+  async function deleteTournoi(id) {
+    const confirmed = window.confirm("Supprimer ce tournoi ?")
+    if (!confirmed) return
+
+    const { error } = await supabase.from("tournois").delete().eq("id", id)
+
+    if (error) {
+      alert(error.message)
       return
     }
 
-    const headers = ["Date", "Room", "Buy-in", "Gains", "Profit", "Position"]
+    await fetchTournois()
+  }
 
-    const rows = tournois.map((t) => [
-      t.date,
-      t.room,
-      t.buyin,
-      t.gains,
-      t.profit,
-      t.position
-    ])
+  async function exportCSV() {
+    const rows = filteredTournois.map((t) => ({
+      date: t.date,
+      room: t.room,
+      buyin: t.buyin,
+      gains: t.gains,
+      profit: t.profit,
+      position: t.position
+    }))
 
-    const csvContent = [
+    const headers = ["date", "room", "buyin", "gains", "profit", "position"]
+    const csv = [
       headers.join(","),
-      ...rows.map((row) => row.join(","))
+      ...rows.map((row) =>
+        headers.map((header) => `"${row[header] ?? ""}"`).join(",")
+      )
     ].join("\n")
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
 
     const link = document.createElement("a")
     link.href = url
-    link.setAttribute("download", "historique-tournois.csv")
+    link.setAttribute("download", "tournois.csv")
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
   }
 
-  function applyFilters() {
-    fetchTournois(filters)
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push("/login")
   }
 
-  function resetFilters() {
-    const emptyFilters = {
-      startDate: "",
-      endDate: "",
-      room: ""
-    }
+  const totalProfit = useMemo(() => {
+    return filteredTournois.reduce((sum, t) => sum + (Number(t.profit) || 0), 0)
+  }, [filteredTournois])
 
-    setFilters(emptyFilters)
-    fetchTournois(emptyFilters)
+  if (!sessionChecked) {
+    return (
+      <div className="page">
+        <div className="container">
+          <div className="card">Chargement...</div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="page">
       <div className="container">
-        <div className="hero">
-          <div>
-            <h1 className="title">Historique des tournois</h1>
-            <p className="subtitle">Filtre, modifie et exporte tes résultats.</p>
+        <div className="topbar">
+          <div className="brand">
+            <div className="brand-mark">PT</div>
+            <div className="brand-text">
+              <div className="brand-title">Historique des tournois</div>
+              <div className="brand-subtitle">
+                {currentUser?.email ? `Connectée : ${currentUser.email}` : ""}
+              </div>
+            </div>
+          </div>
+
+          <div className="actions">
+            <Link href="/">
+              <button className="btn btn-secondary">Dashboard</button>
+            </Link>
+            <Link href="/add">
+              <button className="btn">Ajouter un tournoi</button>
+            </Link>
+            <button className="btn btn-secondary" onClick={handleLogout}>
+              Déconnexion
+            </button>
           </div>
         </div>
 
-        <div className="actions" style={{ marginBottom: 18 }}>
-          <Link href="/">
-            <button className="btn btn-secondary">Retour accueil</button>
-          </Link>
-          <button className="btn" onClick={exportCSV}>
-            Exporter en CSV
-          </button>
+        <div className="hero" style={{ marginBottom: 20 }}>
+          <div className="hero-grid">
+            <div>
+              <h1 className="hero-title">Historique privé de tes tournois</h1>
+              <p className="hero-subtitle">
+                Cette page n’affiche que les tournois du compte connecté.
+              </p>
+
+              <div className="hero-badges">
+                <div className="badge">Filtrage</div>
+                <div className="badge">Édition</div>
+                <div className="badge">Suppression</div>
+                <div className="badge">Export CSV</div>
+              </div>
+            </div>
+
+            <div className="hero-side">
+              <div className="hero-side-card">
+                <div className="hero-side-label">Tournois affichés</div>
+                <div className="hero-side-value">{filteredTournois.length}</div>
+              </div>
+              <div className="hero-side-card">
+                <div className="hero-side-label">Profit affiché</div>
+                <div className="hero-side-value">{totalProfit} €</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="card" style={{ marginBottom: 20 }}>
           <h3 className="section-title">Filtres</h3>
-          <div className="filters">
+
+          <div className="actions" style={{ marginBottom: 14 }}>
             <input
               className="input"
+              style={{ maxWidth: 180 }}
               type="date"
-              value={filters.startDate}
-              onChange={(e) =>
-                setFilters({ ...filters, startDate: e.target.value })
-              }
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
             />
+
             <input
               className="input"
+              style={{ maxWidth: 180 }}
               type="date"
-              value={filters.endDate}
-              onChange={(e) =>
-                setFilters({ ...filters, endDate: e.target.value })
-              }
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
             />
+
             <input
               className="input"
+              style={{ maxWidth: 220 }}
               type="text"
-              placeholder="Room"
-              value={filters.room}
-              onChange={(e) =>
-                setFilters({ ...filters, room: e.target.value })
-              }
+              placeholder="Filtrer par room"
+              value={roomFilter}
+              onChange={(e) => setRoomFilter(e.target.value)}
             />
+
             <button className="btn" onClick={applyFilters}>
               Filtrer
             </button>
+
             <button className="btn btn-secondary" onClick={resetFilters}>
               Réinitialiser
+            </button>
+
+            <button className="btn btn-secondary" onClick={exportCSV}>
+              Exporter en CSV
             </button>
           </div>
         </div>
 
-        <div className="card table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Room</th>
-                <th>Buy-in</th>
-                <th>Gains</th>
-                <th>Profit</th>
-                <th>Position</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tournois.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    {editingId === t.id ? (
-                      <input
-                        className="input"
-                        type="date"
-                        value={editForm.date}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, date: e.target.value })
-                        }
-                      />
-                    ) : (
-                      t.date
-                    )}
-                  </td>
+        <div className="card">
+          <h3 className="section-title">Liste des tournois</h3>
 
-                  <td>
-                    {editingId === t.id ? (
-                      <input
-                        className="input"
-                        value={editForm.room}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, room: e.target.value })
-                        }
-                      />
-                    ) : (
-                      t.room
-                    )}
-                  </td>
-
-                  <td>
-                    {editingId === t.id ? (
-                      <input
-                        className="input"
-                        type="number"
-                        value={editForm.buyin}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, buyin: e.target.value })
-                        }
-                      />
-                    ) : (
-                      t.buyin
-                    )}
-                  </td>
-
-                  <td>
-                    {editingId === t.id ? (
-                      <input
-                        className="input"
-                        type="number"
-                        value={editForm.gains}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, gains: e.target.value })
-                        }
-                      />
-                    ) : (
-                      t.gains
-                    )}
-                  </td>
-
-                  <td className={t.profit >= 0 ? "stat-positive" : "stat-negative"}>
-                    {editingId === t.id
-                      ? Number(editForm.gains || 0) - Number(editForm.buyin || 0)
-                      : t.profit}
-                  </td>
-
-                  <td>
-                    {editingId === t.id ? (
-                      <input
-                        className="input"
-                        type="number"
-                        value={editForm.position}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, position: e.target.value })
-                        }
-                      />
-                    ) : (
-                      t.position
-                    )}
-                  </td>
-
-                  <td>
-                    {editingId === t.id ? (
-                      <div className="actions">
-                        <button className="btn" onClick={() => saveEdit(t.id)}>
-                          Sauvegarder
-                        </button>
-                        <button className="btn btn-secondary" onClick={cancelEdit}>
-                          Annuler
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="actions">
-                        <button className="btn btn-secondary" onClick={() => startEdit(t)}>
-                          Modifier
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => deleteTournoi(t.id)}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </td>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Room</th>
+                  <th>Buy-in</th>
+                  <th>Gains</th>
+                  <th>Profit</th>
+                  <th>Position</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredTournois.map((t) => {
+                  const isEditing = editingId === t.id
+
+                  return (
+                    <tr key={t.id}>
+                      <td>
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            type="date"
+                            value={editForm.date}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, date: e.target.value })
+                            }
+                          />
+                        ) : (
+                          t.date
+                        )}
+                      </td>
+
+                      <td>
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            type="text"
+                            value={editForm.room}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, room: e.target.value })
+                            }
+                          />
+                        ) : (
+                          t.room
+                        )}
+                      </td>
+
+                      <td>
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            type="number"
+                            step="0.01"
+                            value={editForm.buyin}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, buyin: e.target.value })
+                            }
+                          />
+                        ) : (
+                          `${t.buyin} €`
+                        )}
+                      </td>
+
+                      <td>
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            type="number"
+                            step="0.01"
+                            value={editForm.gains}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, gains: e.target.value })
+                            }
+                          />
+                        ) : (
+                          `${t.gains} €`
+                        )}
+                      </td>
+
+                      <td className={(Number(t.profit) || 0) >= 0 ? "stat-positive" : "stat-negative"}>
+                        {isEditing
+                          ? `${(Number(editForm.gains || 0) - Number(editForm.buyin || 0)).toFixed(2)} €`
+                          : `${t.profit} €`}
+                      </td>
+
+                      <td>
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            type="number"
+                            value={editForm.position}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, position: e.target.value })
+                            }
+                          />
+                        ) : (
+                          t.position
+                        )}
+                      </td>
+
+                      <td>
+                        <div className="actions">
+                          {isEditing ? (
+                            <>
+                              <button className="btn" onClick={() => saveEdit(t.id)}>
+                                Sauvegarder
+                              </button>
+                              <button className="btn btn-secondary" onClick={cancelEdit}>
+                                Annuler
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="btn btn-secondary" onClick={() => startEdit(t)}>
+                                Modifier
+                              </button>
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => deleteTournoi(t.id)}
+                              >
+                                Supprimer
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
