@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/router"
 import { supabase } from "../lib/supabaseClient"
 import {
   LineChart,
@@ -14,6 +15,11 @@ import {
 } from "recharts"
 
 export default function Home() {
+  const router = useRouter()
+
+  const [sessionChecked, setSessionChecked] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+
   const [stats, setStats] = useState({
     profit: 0,
     buyins: 0,
@@ -39,21 +45,36 @@ export default function Home() {
   const [inputBankroll, setInputBankroll] = useState("")
 
   useEffect(() => {
-    const savedBankroll = localStorage.getItem("startingBankroll")
-    const initialBankroll = savedBankroll ? Number(savedBankroll) : 0
-    const savedRoom = localStorage.getItem("selectedRoom")
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession()
+      const session = data.session
 
-    if (savedBankroll) {
-      setStartingBankroll(initialBankroll)
-      setInputBankroll(savedBankroll)
+      if (!session) {
+        router.push("/login")
+        return
+      }
+
+      setCurrentUser(session.user)
+
+      const savedBankroll = localStorage.getItem("startingBankroll")
+      const initialBankroll = savedBankroll ? Number(savedBankroll) : 0
+      const savedRoom = localStorage.getItem("selectedRoom")
+
+      if (savedBankroll) {
+        setStartingBankroll(initialBankroll)
+        setInputBankroll(savedBankroll)
+      }
+
+      if (savedRoom) {
+        setSelectedRoom(savedRoom)
+      }
+
+      await fetchStats(initialBankroll, savedRoom || "Toutes")
+      setSessionChecked(true)
     }
 
-    if (savedRoom) {
-      setSelectedRoom(savedRoom)
-    }
-
-    fetchStats(initialBankroll, savedRoom || "Toutes")
-  }, [])
+    checkSession()
+  }, [router])
 
   function formatMonthKey(dateString) {
     const d = new Date(dateString)
@@ -358,6 +379,11 @@ export default function Home() {
     setWeekdayStats(weekdayArray)
   }
 
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
+
   function saveStartingBankroll() {
     const value = Number(inputBankroll) || 0
     localStorage.setItem("startingBankroll", value.toString())
@@ -385,22 +411,35 @@ export default function Home() {
   function getHeatmapStyle(item) {
     if (item.profit > 0) {
       return {
-        background: "linear-gradient(180deg, rgba(46,204,113,0.20) 0%, rgba(46,204,113,0.10) 100%)",
+        background:
+          "linear-gradient(180deg, rgba(46,204,113,0.20) 0%, rgba(46,204,113,0.10) 100%)",
         border: "1px solid rgba(46,204,113,0.40)"
       }
     }
 
     if (item.profit < 0) {
       return {
-        background: "linear-gradient(180deg, rgba(255,107,107,0.20) 0%, rgba(255,107,107,0.10) 100%)",
+        background:
+          "linear-gradient(180deg, rgba(255,107,107,0.20) 0%, rgba(255,107,107,0.10) 100%)",
         border: "1px solid rgba(255,107,107,0.40)"
       }
     }
 
     return {
-      background: "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
+      background:
+        "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
       border: "1px solid var(--border)"
     }
+  }
+
+  if (!sessionChecked) {
+    return (
+      <div className="page">
+        <div className="container">
+          <div className="card">Chargement...</div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -411,7 +450,9 @@ export default function Home() {
             <div className="brand-mark">PT</div>
             <div className="brand-text">
               <div className="brand-title">Poker Tracker</div>
-              <div className="brand-subtitle">Dashboard premium de grind</div>
+              <div className="brand-subtitle">
+                {currentUser?.email ? `Connectée : ${currentUser.email}` : "Dashboard premium de grind"}
+              </div>
             </div>
           </div>
 
@@ -422,6 +463,9 @@ export default function Home() {
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
+            <button className="btn btn-secondary" onClick={handleLogout}>
+              Déconnexion
+            </button>
           </div>
         </div>
 
