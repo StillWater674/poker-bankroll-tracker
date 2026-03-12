@@ -110,7 +110,7 @@ export default function Home() {
     const d = new Date(dateInput)
     const year = d.getFullYear()
     const month = String(d.getMonth() + 1).padStart(2, "0")
-    return `${year}-${month}`
+    return ⁠ ${year}-${month} ⁠
   }
 
   function formatMonthLabel(monthKey) {
@@ -129,7 +129,7 @@ export default function Home() {
       "Nov",
       "Déc"
     ]
-    return `${monthNames[Number(month) - 1]} ${year}`
+    return ⁠ ${monthNames[Number(month) - 1]} ${year} ⁠
   }
 
   function getFrenchWeekday(dateString) {
@@ -554,6 +554,10 @@ export default function Home() {
   const tournamentsNeeded =
     profitPerTournament > 0 ? Math.ceil(moneyNeeded / profitPerTournament) : 0
 
+  const monthsNeeded = monthlyGoal > 0
+    ? Math.ceil(tournamentsNeeded / monthlyGoal)
+    : 0
+
   let evStatus = "Even run"
   if (stats.evDiff > 0) evStatus = "Run good"
   if (stats.evDiff < 0) evStatus = "Run bad"
@@ -586,7 +590,7 @@ export default function Home() {
     return {
       background:
         "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
-      border: "1px solid var(--border)"
+        border: "1px solid var(--border)"
     }
   }
 
@@ -842,7 +846,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: `${bankrollProgressUp}%`,
+                width: ⁠ ${bankrollProgressUp}% ⁠,
                 height: "100%",
                 background: "linear-gradient(90deg,#ff9f43,#ff6b6b)"
               }}
@@ -884,10 +888,26 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <div className="kpi-meta">Objectif bankroll : {bankrollGoalForNextLimit} €</div>
-            <div className="kpi-meta">Manque actuel : {moneyNeeded} €</div>
-            <div className="kpi-meta">Prochaine limite : {targetBuyinNumber} €</div>
+          <div className="grid grid-4" style={{ marginTop: 20 }}>
+            <div className="kpi">
+              <div className="kpi-label">Temps estimé</div>
+              <div className="kpi-value">{monthsNeeded} mois</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Objectif bankroll</div>
+              <div className="kpi-value">{bankrollGoalForNextLimit} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Manque actuel</div>
+              <div className="kpi-value">{moneyNeeded} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Prochaine limite</div>
+              <div className="kpi-value">{targetBuyinNumber} €</div>
+            </div>
           </div>
         </div>
 
@@ -960,7 +980,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: `${goalProgressVolume}%`,
+                width: ⁠ ${goalProgressVolume}% ⁠,
                 height: "100%",
                 background: "linear-gradient(90deg,#6c5ce7,#00d2ff)"
               }}
@@ -995,7 +1015,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: `${goalProgressProfit}%`,
+                width: ⁠ ${goalProgressProfit}% ⁠,
                 height: "100%",
                 background: "linear-gradient(90deg,#2ecc71,#00c9a7)"
               }}
@@ -1030,7 +1050,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: `${yearlyProgress}%`,
+                width: ⁠ ${yearlyProgress}% ⁠,
                 height: "100%",
                 background: "linear-gradient(90deg,#f093fb,#f5576c)"
               }}
@@ -1130,7 +1150,7 @@ export default function Home() {
           <div className="kpi">
             <div className="kpi-label">Meilleur buy-in</div>
             <div className="kpi-value">
-              {stats.bestBuyin ? `${stats.bestBuyin.buyin} €` : "-"}
+              {stats.bestBuyin ? ⁠ ${stats.bestBuyin.buyin} € ⁠ : "-"}
             </div>
             {stats.bestBuyin && (
               <div className="kpi-meta">
@@ -1142,7 +1162,7 @@ export default function Home() {
           <div className="kpi">
             <div className="kpi-label">Pire buy-in</div>
             <div className="kpi-value">
-              {stats.worstBuyin ? `${stats.worstBuyin.buyin} €` : "-"}
+              {stats.worstBuyin ? ⁠ ${stats.worstBuyin.buyin} € ⁠ : "-"}
             </div>
             {stats.worstBuyin && (
               <div className="kpi-meta">
@@ -1161,8 +1181,8 @@ export default function Home() {
                 <XAxis dataKey="date" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
-                  formatter={(value) => [`${value} €`, "Bankroll"]}
-                  labelFormatter={(label) => `Date : ${label}`}
+                  formatter={(value) => [⁠ ${value} € ⁠, "Bankroll"]}
+                  labelFormatter={(label) => ⁠ Date : ${label} ⁠}
                 />
                 <Line
                   type="monotone"
@@ -1185,10 +1205,10 @@ export default function Home() {
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
                   formatter={(value, name) => [
-                    `${value} €`,
+                    ⁠ ${value} € ⁠,
                     name === "profit" ? "Profit" : "EV"
                   ]}
-                  labelFormatter={(label) => `Date : ${label}`}
+                  labelFormatter={(label) => ⁠ Date : ${label} ⁠}
                 />
                 <Line
                   type="monotone"
@@ -1219,7 +1239,7 @@ export default function Home() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
                 <XAxis dataKey="label" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
-                <Tooltip formatter={(value) => [`${value} €`, "Profit mensuel"]} />
+                <Tooltip formatter={(value) => [⁠ ${value} € ⁠, "Profit mensuel"]} />
                 <Bar dataKey="profit" fill="#4ea8de" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -1247,7 +1267,7 @@ export default function Home() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
                 <XAxis dataKey="label" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
-                <Tooltip formatter={(value) => [`${value} €`, "ABI mensuel"]} />
+                <Tooltip formatter={(value) => [⁠ ${value} € ⁠, "ABI mensuel"]} />
                 <Line
                   type="monotone"
                   dataKey="abi"
@@ -1268,8 +1288,8 @@ export default function Home() {
                 <XAxis dataKey="room" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
-                  formatter={(value) => [`${value} €`, "Profit"]}
-                  labelFormatter={(label) => `Room : ${label}`}
+                  formatter={(value) => [⁠ ${value} € ⁠, "Profit"]}
+                  labelFormatter={(label) => ⁠ Room : ${label} ⁠}
                 />
                 <Bar dataKey="totalProfit" fill="#f5b041" radius={[8, 8, 0, 0]} />
               </BarChart>
@@ -1366,8 +1386,8 @@ export default function Home() {
                   <XAxis dataKey="date" stroke="#aab2c5" />
                   <YAxis stroke="#aab2c5" />
                   <Tooltip
-                    formatter={(value) => [`${value} €`, "Bankroll room"]}
-                    labelFormatter={(label) => `Date : ${label}`}
+                    formatter={(value) => [⁠ ${value} € ⁠, "Bankroll room"]}
+                    labelFormatter={(label) => ⁠ Date : ${label} ⁠}
                   />
                   <Line
                     type="monotone"
