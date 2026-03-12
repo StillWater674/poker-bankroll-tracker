@@ -992,7 +992,7 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
             <div className="kpi-meta">Moyenne de gain ou perte par entrée</div>
           </div>
         </div>
-        
+
 <div className="card dashboard-section" style={{marginBottom:20}}>
 
 <h3 className="section-title">Projection bankroll</h3>
@@ -1016,14 +1016,20 @@ Estimation du nombre de tournois nécessaires pour atteindre la prochaine limite
 <div className="kpi">
 <div className="kpi-label">Profit moyen / tournoi</div>
 <div className="kpi-value">
-{profitPerTournament.toFixed(2)} €
+{((Number(stats.abi) || 0) * (Number(roi) || 0) / 100).toFixed(2)} €
+</div>
 </div>
 </div>
 
 <div className="kpi">
 <div className="kpi-label">Tournois estimés</div>
 <div className="kpi-value">
-{tournamentsNeeded}
+{((Number(stats.abi) || 0) * (Number(roi) || 0) / 100) > 0
+? Math.ceil(
+Math.max((targetBuyinNumber * bankrollRuleUpNumber) - currentBankroll,0)
+/ ((Number(stats.abi) || 0) * (Number(roi) || 0) / 100)
+)
+: 0}
 </div>
 </div>
 
