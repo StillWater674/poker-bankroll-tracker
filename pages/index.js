@@ -500,6 +500,22 @@ export default function Home() {
   const selectedRoomStats = useMemo(() => {
     return roomStats.find((r) => r.room === selectedRoom) || null
   }, [roomStats, selectedRoom])
+  const roiNumber = Number(roi) || 0
+  const abiNumber = Number(stats.abi) || 0
+
+const profitPerTournament =
+roiNumber > 0 ? (abiNumber * roiNumber) / 100 : 0
+
+const bankrollGoalForNextLimit =
+targetBuyinNumber * bankrollRuleUpNumber
+
+const moneyNeeded =
+Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
+
+  const tournamentsNeeded =
+  profitPerTournament > 0
+  ? Math.ceil(moneyNeeded / profitPerTournament)
+  : 0
 
   const currentBuyinNumber = Number(currentBuyin) || 0
   const targetBuyinNumber = Number(targetBuyin) || 0
@@ -976,6 +992,60 @@ export default function Home() {
             <div className="kpi-meta">Moyenne de gain ou perte par entrée</div>
           </div>
         </div>
+        
+<div className="card dashboard-section" style={{marginBottom:20}}>
+
+<h3 className="section-title">Projection bankroll</h3>
+
+<p className="section-subtitle">
+Estimation du nombre de tournois nécessaires pour atteindre la prochaine limite.
+</p>
+
+<div className="grid grid-4">
+
+<div className="kpi">
+<div className="kpi-label">ABI</div>
+<div className="kpi-value">{stats.abi} €</div>
+</div>
+
+<div className="kpi">
+<div className="kpi-label">ROI</div>
+<div className="kpi-value">{roi} %</div>
+</div>
+
+<div className="kpi">
+<div className="kpi-label">Profit moyen / tournoi</div>
+<div className="kpi-value">
+{profitPerTournament.toFixed(2)} €
+</div>
+</div>
+
+<div className="kpi">
+<div className="kpi-label">Tournois estimés</div>
+<div className="kpi-value">
+{tournamentsNeeded}
+</div>
+</div>
+
+</div>
+
+<div style={{marginTop:14}}>
+
+<div className="kpi-meta">
+Objectif bankroll : {bankrollGoalForNextLimit} €
+</div>
+
+<div className="kpi-meta">
+Manque actuel : {moneyNeeded} €
+</div>
+
+<div className="kpi-meta">
+Prochaine limite : {targetBuyinNumber} €
+</div>
+
+</div>
+
+</div>
 
         <div className="grid grid-4 dashboard-section">
           <div className="kpi">
