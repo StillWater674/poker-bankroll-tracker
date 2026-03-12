@@ -35,14 +35,16 @@ export default function Home() {
     worstBuyin: null
   })
 
-  const [chartData, setChartData] = useState([])
+  const [bankrollChartData, setBankrollChartData] = useState([])
+  const [evChartData, setEvChartData] = useState([])
   const [monthlyData, setMonthlyData] = useState([])
   const [buyinStats, setBuyinStats] = useState([])
   const [roomStats, setRoomStats] = useState([])
   const [roomChartData, setRoomChartData] = useState([])
-  const [roomOptions, setRoomOptions] = useState([])
+  const [roomOptions, setRoomOptions] = useState(["Toutes"])
   const [selectedRoom, setSelectedRoom] = useState("Toutes")
   const [weekdayStats, setWeekdayStats] = useState([])
+
   const [startingBankroll, setStartingBankroll] = useState(0)
   const [inputBankroll, setInputBankroll] = useState("")
 
@@ -57,7 +59,13 @@ export default function Home() {
 
   useEffect(() => {
     async function checkSession() {
-      const { data } = await supabase.auth.getSession()
+      const { data, error } = await supabase.auth.getSession()
+
+      if (error) {
+        console.error(error)
+        return
+      }
+
       const session = data.session
 
       if (!session) {
@@ -68,7 +76,6 @@ export default function Home() {
       setCurrentUser(session.user)
 
       const savedBankroll = localStorage.getItem("startingBankroll")
-      const initialBankroll = savedBankroll ? Number(savedBankroll) : 0
       const savedRoom = localStorage.getItem("selectedRoom")
       const savedCurrentBuyin = localStorage.getItem("currentBuyin")
       const savedTargetBuyin = localStorage.getItem("targetBuyin")
@@ -78,42 +85,19 @@ export default function Home() {
       const savedMonthlyProfitGoal = localStorage.getItem("monthlyProfitGoal")
       const savedYearlyGoal = localStorage.getItem("yearlyGoal")
 
-      if (savedBankroll) {
-        setStartingBankroll(initialBankroll)
-        setInputBankroll(savedBankroll)
-      }
+      const initialBankroll = savedBankroll ? Number(savedBankroll) : 0
 
-      if (savedRoom) {
-        setSelectedRoom(savedRoom)
-      }
+      setStartingBankroll(initialBankroll)
+      setInputBankroll(savedBankroll || "")
 
-      if (savedCurrentBuyin) {
-        setCurrentBuyin(savedCurrentBuyin)
-      }
-
-      if (savedTargetBuyin) {
-        setTargetBuyin(savedTargetBuyin)
-      }
-
-      if (savedBankrollRuleUp) {
-        setBankrollRuleUp(savedBankrollRuleUp)
-      }
-
-      if (savedBankrollRuleDown) {
-        setBankrollRuleDown(savedBankrollRuleDown)
-      }
-
-      if (savedMonthlyGoal) {
-        setMonthlyGoal(Number(savedMonthlyGoal))
-      }
-
-      if (savedMonthlyProfitGoal) {
-        setMonthlyProfitGoal(Number(savedMonthlyProfitGoal))
-      }
-
-      if (savedYearlyGoal) {
-        setYearlyGoal(Number(savedYearlyGoal))
-      }
+      if (savedRoom) setSelectedRoom(savedRoom)
+      if (savedCurrentBuyin) setCurrentBuyin(savedCurrentBuyin)
+      if (savedTargetBuyin) setTargetBuyin(savedTargetBuyin)
+      if (savedBankrollRuleUp) setBankrollRuleUp(savedBankrollRuleUp)
+      if (savedBankrollRuleDown) setBankrollRuleDown(savedBankrollRuleDown)
+      if (savedMonthlyGoal) setMonthlyGoal(Number(savedMonthlyGoal))
+      if (savedMonthlyProfitGoal) setMonthlyProfitGoal(Number(savedMonthlyProfitGoal))
+      if (savedYearlyGoal) setYearlyGoal(Number(savedYearlyGoal))
 
       await fetchStats(initialBankroll, savedRoom || "Toutes")
       setSessionChecked(true)
@@ -189,9 +173,10 @@ export default function Home() {
     let profit = 0
     let evTotal = 0
     let buyins = 0
-    const grouped = {}
-    const rooms = {}
-    const months = {}
+
+    const groupedBuyins = {}
+    const groupedRooms = {}
+    const groupedMonths = {}
     const weekdays = {
       Lundi: { day: "Lundi", count: 0, profit: 0, buyins: 0 },
       Mardi: { day: "Mardi", count: 0, profit: 0, buyins: 0 },
@@ -204,12 +189,12 @@ export default function Home() {
 
     let runningProfit = 0
     let runningEv = 0
-    const tournamentCurve = []
+    const evCurve = []
 
     tournois.forEach((t, index) => {
       const tournoiProfit = Number(t.profit) || 0
-      const tournoiBuyin = Number(t.buyin) || 0
       const tournoiEv = Number(t.ev) || 0
+      const tournoiBuyin = Number(t.buyin) || 0
       const room = t.room || "Inconnu"
       const monthKey = formatMonthKey(t.date)
       const weekday = getFrenchWeekday(t.date)
@@ -221,17 +206,15 @@ export default function Home() {
       runningProfit += tournoiProfit
       runningEv += tournoiEv
 
-      tournamentCurve.push({
+      evCurve.push({
         id: index + 1,
         date: t.date,
-        profit: runningProfit,
-        ev: runningEv
+        profit: Number(runningProfit.toFixed(2)),
+        ev: Number(runningEv.toFixed(2))
       })
 
-      const buyinKey = tournoiBuyin.toString()
-
-      if (!grouped[buyinKey]) {
-        grouped[buyinKey] = {
+      if (!groupedBuyins[tournoiBuyin]) {
+        groupedBuyins[tournoiBuyin] = {
           buyin: tournoiBuyin,
           count: 0,
           totalProfit: 0,
@@ -239,12 +222,12 @@ export default function Home() {
         }
       }
 
-      grouped[buyinKey].count += 1
-      grouped[buyinKey].totalProfit += tournoiProfit
-      grouped[buyinKey].totalBuyins += tournoiBuyin
+      groupedBuyins[tournoiBuyin].count += 1
+      groupedBuyins[tournoiBuyin].totalProfit += tournoiProfit
+      groupedBuyins[tournoiBuyin].totalBuyins += tournoiBuyin
 
-      if (!rooms[room]) {
-        rooms[room] = {
+      if (!groupedRooms[room]) {
+        groupedRooms[room] = {
           room,
           count: 0,
           totalProfit: 0,
@@ -252,27 +235,25 @@ export default function Home() {
         }
       }
 
-      rooms[room].count += 1
-      rooms[room].totalProfit += tournoiProfit
-      rooms[room].totalBuyins += tournoiBuyin
+      groupedRooms[room].count += 1
+      groupedRooms[room].totalProfit += tournoiProfit
+      groupedRooms[room].totalBuyins += tournoiBuyin
 
-      if (!months[monthKey]) {
-        months[monthKey] = {
+      if (!groupedMonths[monthKey]) {
+        groupedMonths[monthKey] = {
           monthKey,
           label: formatMonthLabel(monthKey),
           profit: 0,
           ev: 0,
           volume: 0,
-          buyins: 0,
-          abi: 0,
-          averageProfit: 0
+          buyins: 0
         }
       }
 
-      months[monthKey].profit += tournoiProfit
-      months[monthKey].ev += tournoiEv
-      months[monthKey].volume += 1
-      months[monthKey].buyins += tournoiBuyin
+      groupedMonths[monthKey].profit += tournoiProfit
+      groupedMonths[monthKey].ev += tournoiEv
+      groupedMonths[monthKey].volume += 1
+      groupedMonths[monthKey].buyins += tournoiBuyin
 
       weekdays[weekday].count += 1
       weekdays[weekday].profit += tournoiProfit
@@ -310,48 +291,52 @@ export default function Home() {
       }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date))
 
-    const globalChart = globalEvents.map((event, index) => {
+    const bankrollCurve = globalEvents.map((event, index) => {
       runningBankroll += event.variation
 
       return {
         id: index + 1,
         date: event.date,
-        bankroll: runningBankroll,
-        variation: event.variation,
+        bankroll: Number(runningBankroll.toFixed(2)),
+        variation: Number(event.variation.toFixed(2)),
         type: event.type
       }
     })
 
-    const monthlyArray = Object.values(months)
+    const monthlyArray = Object.values(groupedMonths)
       .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
       .map((item) => ({
         ...item,
         roi:
-          item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0",
+          item.buyins > 0 ? Number(((item.profit / item.buyins) * 100).toFixed(1)) : 0,
         abi:
-          item.volume > 0 ? (item.buyins / item.volume).toFixed(2) : "0.00",
+          item.volume > 0 ? Number((item.buyins / item.volume).toFixed(2)) : 0,
         averageProfit:
-          item.volume > 0 ? (item.profit / item.volume).toFixed(2) : "0.00",
-        evDiff: (item.profit - item.ev).toFixed(2)
+          item.volume > 0 ? Number((item.profit / item.volume).toFixed(2)) : 0,
+        evDiff: Number((item.profit - item.ev).toFixed(2))
       }))
 
-    const buyinArray = Object.values(grouped)
+    const buyinArray = Object.values(groupedBuyins)
       .map((item) => ({
         ...item,
+        totalProfit: Number(item.totalProfit.toFixed(2)),
+        totalBuyins: Number(item.totalBuyins.toFixed(2)),
         roi:
           item.totalBuyins > 0
-            ? ((item.totalProfit / item.totalBuyins) * 100).toFixed(1)
-            : "0.0"
+            ? Number(((item.totalProfit / item.totalBuyins) * 100).toFixed(1))
+            : 0
       }))
       .sort((a, b) => a.buyin - b.buyin)
 
-    const roomArray = Object.values(rooms)
+    const roomArray = Object.values(groupedRooms)
       .map((item) => ({
         ...item,
+        totalProfit: Number(item.totalProfit.toFixed(2)),
+        totalBuyins: Number(item.totalBuyins.toFixed(2)),
         roi:
           item.totalBuyins > 0
-            ? ((item.totalProfit / item.totalBuyins) * 100).toFixed(1)
-            : "0.0"
+            ? Number(((item.totalProfit / item.totalBuyins) * 100).toFixed(1))
+            : 0
       }))
       .sort((a, b) => b.totalProfit - a.totalProfit)
 
@@ -367,18 +352,18 @@ export default function Home() {
 
     const weekdayArray = weekdayOrder.map((day) => {
       const item = weekdays[day]
-      const dayRoi =
-        item.buyins > 0 ? ((item.profit / item.buyins) * 100).toFixed(1) : "0.0"
-
       return {
         ...item,
-        roi: dayRoi
+        profit: Number(item.profit.toFixed(2)),
+        buyins: Number(item.buyins.toFixed(2)),
+        roi:
+          item.buyins > 0 ? Number(((item.profit / item.buyins) * 100).toFixed(1)) : 0
       }
     })
 
-    const uniqueRooms = ["Toutes", ...Object.keys(rooms).sort()]
+    const uniqueRooms = ["Toutes", ...Object.keys(groupedRooms).sort()]
 
-    let filteredRoomChart = []
+    let filteredRoomCurve = []
 
     if (roomChoice && roomChoice !== "Toutes") {
       let runningRoomBankroll = Number(baseBankroll) || 0
@@ -394,21 +379,21 @@ export default function Home() {
         }))
         .sort((a, b) => new Date(a.date) - new Date(b.date))
 
-      filteredRoomChart = roomEvents.map((event, index) => {
+      filteredRoomCurve = roomEvents.map((event, index) => {
         runningRoomBankroll += event.variation
 
         return {
           id: index + 1,
           date: event.date,
-          bankroll: runningRoomBankroll,
-          variation: event.variation
+          bankroll: Number(runningRoomBankroll.toFixed(2)),
+          variation: Number(event.variation.toFixed(2))
         }
       })
     }
 
-    const abi = tournois.length > 0 ? (buyins / tournois.length).toFixed(2) : "0.00"
+    const abi = tournois.length > 0 ? Number((buyins / tournois.length).toFixed(2)) : 0
     const averageProfit =
-      tournois.length > 0 ? (profit / tournois.length).toFixed(2) : "0.00"
+      tournois.length > 0 ? Number((profit / tournois.length).toFixed(2)) : 0
 
     const bestRoom = roomArray.length > 0 ? roomArray[0] : null
     const worstRoom = roomArray.length > 0 ? roomArray[roomArray.length - 1] : null
@@ -416,6 +401,7 @@ export default function Home() {
     const sortedBuyinsByProfit = [...buyinArray].sort(
       (a, b) => b.totalProfit - a.totalProfit
     )
+
     const bestBuyin = sortedBuyinsByProfit.length > 0 ? sortedBuyinsByProfit[0] : null
     const worstBuyin =
       sortedBuyinsByProfit.length > 0
@@ -423,11 +409,11 @@ export default function Home() {
         : null
 
     setStats({
-      profit,
-      ev: evTotal,
+      profit: Number(profit.toFixed(2)),
+      ev: Number(evTotal.toFixed(2)),
       count: tournois.length,
-      buyins,
-      mouvementsImpact,
+      buyins: Number(buyins.toFixed(2)),
+      mouvementsImpact: Number(mouvementsImpact.toFixed(2)),
       abi,
       averageProfit,
       evDiff: Number((profit - evTotal).toFixed(2)),
@@ -437,20 +423,15 @@ export default function Home() {
       worstBuyin
     })
 
-    setChartData(globalChart)
+    setBankrollChartData(bankrollCurve)
+    setEvChartData(evCurve)
     setMonthlyData(monthlyArray)
     setBuyinStats(buyinArray)
     setRoomStats(roomArray)
     setRoomOptions(uniqueRooms)
-    setRoomChartData(filteredRoomChart)
+    setRoomChartData(filteredRoomCurve)
     setWeekdayStats(weekdayArray)
-
-    // courbe EV vs profit
-    setChartData((prev) => prev)
-    setEvChartData(tournamentCurve)
   }
-
-  const [evChartData, setEvChartData] = useState([])
 
   async function handleLogout() {
     const { error } = await supabase.auth.signOut()
@@ -485,51 +466,39 @@ export default function Home() {
     localStorage.setItem("bankrollRuleDown", bankrollRuleDown)
   }
 
-  function saveMonthlyGoals() {
+  function saveGoals() {
     localStorage.setItem("monthlyGoal", String(monthlyGoal))
     localStorage.setItem("monthlyProfitGoal", String(monthlyProfitGoal))
     localStorage.setItem("yearlyGoal", String(yearlyGoal))
   }
 
   const roi =
-    stats.buyins > 0 ? ((stats.profit / stats.buyins) * 100).toFixed(1) : 0
+    stats.buyins > 0 ? Number(((stats.profit / stats.buyins) * 100).toFixed(1)) : 0
 
   const currentBankroll =
-    startingBankroll + stats.profit + stats.mouvementsImpact
+    Number((startingBankroll + stats.profit + stats.mouvementsImpact).toFixed(2))
 
   const selectedRoomStats = useMemo(() => {
     return roomStats.find((r) => r.room === selectedRoom) || null
   }, [roomStats, selectedRoom])
-  const roiNumber = Number(roi) || 0
-  const abiNumber = Number(stats.abi) || 0
-
-const profitPerTournament =
-roiNumber > 0 ? (abiNumber * roiNumber) / 100 : 0
-
-const bankrollGoalForNextLimit =
-targetBuyinNumber * bankrollRuleUpNumber
-
-const moneyNeeded =
-Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
-
-  const tournamentsNeeded =
-  profitPerTournament > 0
-  ? Math.ceil(moneyNeeded / profitPerTournament)
-  : 0
 
   const currentBuyinNumber = Number(currentBuyin) || 0
   const targetBuyinNumber = Number(targetBuyin) || 0
   const bankrollRuleUpNumber = Number(bankrollRuleUp) || 0
   const bankrollRuleDownNumber = Number(bankrollRuleDown) || 0
 
-  const bankrollGoalUp = targetBuyinNumber * bankrollRuleUpNumber
-  const bankrollDangerDown = currentBuyinNumber * bankrollRuleDownNumber
+  const bankrollGoalUp = Number((targetBuyinNumber * bankrollRuleUpNumber).toFixed(2))
+  const bankrollDangerDown = Number((currentBuyinNumber * bankrollRuleDownNumber).toFixed(2))
 
-  const bankrollMissingUp = Math.max(bankrollGoalUp - currentBankroll, 0)
+  const bankrollMissingUp = Math.max(
+    Number((bankrollGoalUp - currentBankroll).toFixed(2)),
+    0
+  )
+
   const bankrollProgressUp =
     bankrollGoalUp > 0
-      ? Math.min((currentBankroll / bankrollGoalUp) * 100, 100).toFixed(1)
-      : "0.0"
+      ? Number(Math.min((currentBankroll / bankrollGoalUp) * 100, 100).toFixed(1))
+      : 0
 
   const recommendedLimit =
     bankrollRuleUpNumber > 0
@@ -537,18 +506,15 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
       : 0
 
   let recommendation = "Limite optimale"
-  if (recommendedLimit > currentBuyinNumber) {
-    recommendation = "Tu peux monter"
-  } else if (recommendedLimit < currentBuyinNumber) {
-    recommendation = "Redescente conseillée"
-  }
+  if (recommendedLimit > currentBuyinNumber) recommendation = "Tu peux monter"
+  if (recommendedLimit < currentBuyinNumber) recommendation = "Redescente conseillée"
 
   let bankrollStatus = "Stable"
   if (currentBankroll >= bankrollGoalUp && bankrollGoalUp > 0) {
     bankrollStatus = "Prête à monter"
   } else if (currentBankroll < bankrollDangerDown && bankrollDangerDown > 0) {
     bankrollStatus = "Redescente recommandée"
-  } else if (Number(bankrollProgressUp) >= 80) {
+  } else if (bankrollProgressUp >= 80) {
     bankrollStatus = "Presque prête"
   } else if (bankrollDangerDown > 0 && currentBankroll <= bankrollDangerDown * 1.15) {
     bankrollStatus = "Attention"
@@ -561,18 +527,32 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
 
   const goalProgressVolume =
     monthlyGoal > 0
-      ? Math.min((currentMonthVolume / monthlyGoal) * 100, 100).toFixed(1)
-      : "0.0"
+      ? Number(Math.min((currentMonthVolume / monthlyGoal) * 100, 100).toFixed(1))
+      : 0
 
   const goalProgressProfit =
     monthlyProfitGoal > 0
-      ? Math.min((currentMonthProfit / monthlyProfitGoal) * 100, 100).toFixed(1)
-      : "0.0"
+      ? Number(Math.min((currentMonthProfit / monthlyProfitGoal) * 100, 100).toFixed(1))
+      : 0
 
   const yearlyProgress =
     yearlyGoal > 0
-      ? Math.min((stats.profit / yearlyGoal) * 100, 100).toFixed(1)
-      : "0.0"
+      ? Number(Math.min((stats.profit / yearlyGoal) * 100, 100).toFixed(1))
+      : 0
+
+  const roiNumber = Number(roi) || 0
+  const abiNumber = Number(stats.abi) || 0
+  const profitPerTournament =
+    roiNumber > 0 ? Number(((abiNumber * roiNumber) / 100).toFixed(2)) : 0
+
+  const bankrollGoalForNextLimit = bankrollGoalUp
+  const moneyNeeded = Math.max(
+    Number((bankrollGoalForNextLimit - currentBankroll).toFixed(2)),
+    0
+  )
+
+  const tournamentsNeeded =
+    profitPerTournament > 0 ? Math.ceil(moneyNeeded / profitPerTournament) : 0
 
   let evStatus = "Even run"
   if (stats.evDiff > 0) evStatus = "Run good"
@@ -629,7 +609,9 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
             <div className="brand-text">
               <div className="brand-title">Poker Tracker</div>
               <div className="brand-subtitle">
-                {currentUser?.user_metadata?.pseudo || currentUser?.email || "Dashboard premium de grind"}
+                {currentUser?.user_metadata?.pseudo ||
+                  currentUser?.email ||
+                  "Dashboard premium de grind"}
               </div>
             </div>
           </div>
@@ -821,6 +803,95 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
         </div>
 
         <div className="card dashboard-section" style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Objectif bankroll pour monter de limite</h3>
+          <p className="section-subtitle">
+            Suivi automatique de ta progression vers la prochaine limite.
+          </p>
+
+          <div className="grid grid-4">
+            <div className="kpi">
+              <div className="kpi-label">Bankroll actuelle</div>
+              <div className="kpi-value">{currentBankroll} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Objectif bankroll</div>
+              <div className="kpi-value">{bankrollGoalForNextLimit} €</div>
+              <div className="kpi-meta">pour jouer {targetBuyinNumber}€</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Manque pour monter</div>
+              <div className="kpi-value">{moneyNeeded} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Progression</div>
+              <div className="kpi-value">{bankrollProgressUp}%</div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              height: 12,
+              background: "#1e2330",
+              borderRadius: 999,
+              marginTop: 20,
+              overflow: "hidden"
+            }}
+          >
+            <div
+              style={{
+                width: `${bankrollProgressUp}%`,
+                height: "100%",
+                background: "linear-gradient(90deg,#ff9f43,#ff6b6b)"
+              }}
+            />
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div className="kpi-meta">Limite actuelle : {currentBuyinNumber} €</div>
+            <div className="kpi-meta">Prochaine limite : {targetBuyinNumber} €</div>
+            <div className="kpi-meta">Statut : {bankrollStatus}</div>
+          </div>
+        </div>
+
+        <div className="card dashboard-section" style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Projection bankroll</h3>
+          <p className="section-subtitle">
+            Estimation du nombre de tournois nécessaires pour atteindre la prochaine limite.
+          </p>
+
+          <div className="grid grid-4">
+            <div className="kpi">
+              <div className="kpi-label">ABI</div>
+              <div className="kpi-value">{stats.abi} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">ROI</div>
+              <div className="kpi-value">{roi} %</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Profit moyen / tournoi</div>
+              <div className="kpi-value">{profitPerTournament.toFixed(2)} €</div>
+            </div>
+
+            <div className="kpi">
+              <div className="kpi-label">Tournois estimés</div>
+              <div className="kpi-value">{tournamentsNeeded}</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div className="kpi-meta">Objectif bankroll : {bankrollGoalForNextLimit} €</div>
+            <div className="kpi-meta">Manque actuel : {moneyNeeded} €</div>
+            <div className="kpi-meta">Prochaine limite : {targetBuyinNumber} €</div>
+          </div>
+        </div>
+
+        <div className="card dashboard-section" style={{ marginBottom: 20 }}>
           <h3 className="section-title">Objectifs mensuels et annuel</h3>
           <p className="section-subtitle">
             Volume de grind et profit cible pour rester disciplinée.
@@ -854,7 +925,7 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
               style={{ maxWidth: 180 }}
             />
 
-            <button className="btn" onClick={saveMonthlyGoals}>
+            <button className="btn" onClick={saveGoals}>
               Sauvegarder
             </button>
           </div>
@@ -993,66 +1064,6 @@ Math.max(bankrollGoalForNextLimit - currentBankroll, 0)
           </div>
         </div>
 
-<div className="card dashboard-section" style={{marginBottom:20}}>
-
-<h3 className="section-title">Projection bankroll</h3>
-
-<p className="section-subtitle">
-Estimation du nombre de tournois nécessaires pour atteindre la prochaine limite.
-</p>
-
-<div className="grid grid-4">
-
-<div className="kpi">
-<div className="kpi-label">ABI</div>
-<div className="kpi-value">{stats.abi} €</div>
-</div>
-
-<div className="kpi">
-<div className="kpi-label">ROI</div>
-<div className="kpi-value">{roi} %</div>
-</div>
-
-<div className="kpi">
-<div className="kpi-label">Profit moyen / tournoi</div>
-<div className="kpi-value">
-{((Number(stats.abi) || 0) * (Number(roi) || 0) / 100).toFixed(2)} €
-</div>
-</div>
-</div>
-
-<div className="kpi">
-<div className="kpi-label">Tournois estimés</div>
-<div className="kpi-value">
-{((Number(stats.abi) || 0) * (Number(roi) || 0) / 100) > 0
-? Math.ceil(
-Math.max((targetBuyinNumber * bankrollRuleUpNumber) - currentBankroll,0)
-/ ((Number(stats.abi) || 0) * (Number(roi) || 0) / 100)
-)
-: 0}
-</div>
-</div>
-
-</div>
-
-<div style={{marginTop:14}}>
-
-<div className="kpi-meta">
-Objectif bankroll : {bankrollGoalForNextLimit} €
-</div>
-
-<div className="kpi-meta">
-Manque actuel : {moneyNeeded} €
-</div>
-
-<div className="kpi-meta">
-Prochaine limite : {targetBuyinNumber} €
-</div>
-
-</div>
-
-</div>
-
         <div className="grid grid-4 dashboard-section">
           <div className="kpi">
             <div className="kpi-label">Profit réel</div>
@@ -1074,7 +1085,11 @@ Prochaine limite : {targetBuyinNumber} €
             <div className="kpi-label">Statut EV</div>
             <div className="kpi-value">{evStatus}</div>
             <div className="kpi-meta">
-              {stats.evDiff < 0 ? "tu run sous l'EV" : stats.evDiff > 0 ? "tu run au-dessus de l'EV" : "équilibre"}
+              {stats.evDiff < 0
+                ? "tu run sous l'EV"
+                : stats.evDiff > 0
+                  ? "tu run au-dessus de l'EV"
+                  : "équilibre"}
             </div>
           </div>
         </div>
@@ -1141,7 +1156,7 @@ Prochaine limite : {targetBuyinNumber} €
           <div className="card chart-card">
             <h3 className="section-title">Courbe de bankroll globale</h3>
             <ResponsiveContainer width="100%" height="88%">
-              <LineChart data={chartData}>
+              <LineChart data={bankrollChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
                 <XAxis dataKey="date" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
@@ -1169,7 +1184,10 @@ Prochaine limite : {targetBuyinNumber} €
                 <XAxis dataKey="date" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
-                  formatter={(value, name) => [`${value} €`, name === "profit" ? "Profit" : "EV"]}
+                  formatter={(value, name) => [
+                    `${value} €`,
+                    name === "profit" ? "Profit" : "EV"
+                  ]}
                   labelFormatter={(label) => `Date : ${label}`}
                 />
                 <Line
