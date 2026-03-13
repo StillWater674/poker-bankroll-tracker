@@ -720,7 +720,14 @@ export default function Home() {
         <div className="card dashboard-section" style={{ marginBottom: 20 }}>
           <h3 className="section-title">Session du jour</h3>
 
-          <div className="grid grid-5">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, 1fr)",
+              gap: "16px",
+              marginTop: "20px"
+            }}
+          >
             <div className="kpi">
               <div className="kpi-label">Tournois</div>
               <div className="kpi-value">{stats.todayCount}</div>
