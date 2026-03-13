@@ -19,6 +19,7 @@ export default function Home() {
 
   const [sessionChecked, setSessionChecked] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  const [gameTypeStats, setGameTypeStats] = useState([])
 
   const [stats, setStats] = useState({
     profit: 0,
@@ -193,6 +194,7 @@ export default function Home() {
     const groupedBuyins = {}
     const groupedRooms = {}
     const groupedMonths = {}
+    const groupedGameTypes = {}
     const weekdays = {
       Lundi: { day: "Lundi", count: 0, profit: 0, buyins: 0 },
       Mardi: { day: "Mardi", count: 0, profit: 0, buyins: 0 },
@@ -213,10 +215,23 @@ export default function Home() {
       const tournoiBuyin = Number(t.buyin) || 0
       const tournoiDuration = Number(t.duration_minutes) || 0
       const tournoiDate = t.date ? t.date.slice(0, 10) : ""
+      const gameType = t.game_type || "MTT"
       const room = t.room || "Inconnu"
       const monthKey = formatMonthKey(t.date)
       const weekday = getFrenchWeekday(t.date)
 
+      if (!groupedGameTypes[gameType]) {
+        groupedGameTypes[gameType] = {
+          gameType,
+          count: 0,
+          totalProfit: 0,
+          totalBuyins: 0
+        }
+      }
+
+      groupedGameTypes[gameType].count += 1
+      groupedGameTypes[gameType].totalProfit += tournoiProfit
+      groupedGameTypes[gameType].totalBuyins += tournoiBuyin
       if (tournoiDate === today) {
         todayCount += 1
         todayProfit += tournoiProfit
@@ -350,6 +365,18 @@ export default function Home() {
             : 0
       }))
       .sort((a, b) => a.buyin - b.buyin)
+
+    const gameTypeArray = Object.values(groupedGameTypes)
+      .map((item) => ({
+        ...item,
+        totalProfit: Number(item.totalProfit.toFixed(2)),
+        totalBuyins: Number(item.totalBuyins.toFixed(2)),
+        roi:
+          item.totalBuyins > 0
+            ? Number(((item.totalProfit / item.totalBuyins) * 100).toFixed(1))
+            : 0
+      }))
+      .sort((a, b) => b.totalProfit - a.totalProfit)
 
     const roomArray = Object.values(groupedRooms)
       .map((item) => ({
@@ -490,6 +517,7 @@ export default function Home() {
     localStorage.setItem("startingBankroll", value.toString())
     setStartingBankroll(value)
     setInputBankroll(value.toString())
+    setGameTypeStats(gameTypeArray)
     fetchStats(value, selectedRoom)
   }
 
