@@ -356,7 +356,9 @@ textarea {
 }
 
 .chart-card {
-  height: 420px;
+  min-height: 420px;
+  overflow: hidden;
+  padding-bottom: 24px;
 }
 
 .spacer {

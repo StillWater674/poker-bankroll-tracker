@@ -1274,10 +1274,16 @@ export default function Home() {
       <div className="grid grid-2 dashboard-section">
         <div className="card chart-card">
           <h3 className="section-title">Courbe de bankroll globale</h3>
-          <ResponsiveContainer width="100%" height="88%">
+          <ResponsiveContainer width="100%" height={320}>
             <LineChart data={bankrollChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
-              <XAxis dataKey="date" stroke="#aab2c5" />
+              <XAxis
+                dataKey="date"
+                stroke="#aab2c5"
+                tickMargin={12}
+                height={50}
+                minTickGap={24}
+              />
               <YAxis stroke="#aab2c5" />
               <Tooltip
                 formatter={(value) => [`${value} €`, "Bankroll"]}
