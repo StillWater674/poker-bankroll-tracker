@@ -644,6 +644,10 @@ setStats({
               <button className="btn btn-secondary">Ajouter un mouvement</button>
             </Link>
 
+            <Link href="/profile">
+              <button className="btn btn-secondary">Profil joueur</button>
+           </Link>
+           
             <button className="btn btn-secondary" onClick={handleLogout}>
               Déconnexion
             </button>
