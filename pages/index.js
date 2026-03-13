@@ -20,20 +20,22 @@ export default function Home() {
   const [sessionChecked, setSessionChecked] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
 
-  const [stats, setStats] = useState({
-    profit: 0,
-    ev: 0,
-    count: 0,
-    buyins: 0,
-    mouvementsImpact: 0,
-    abi: 0,
-    averageProfit: 0,
-    evDiff: 0,
-    bestRoom: null,
-    worstRoom: null,
-    bestBuyin: null,
-    worstBuyin: null
-  })
+const [stats, setStats] = useState({
+  profit: 0,
+  ev: 0,
+  count: 0,
+  buyins: 0,
+  mouvementsImpact: 0,
+  abi: 0,
+  averageProfit: 0,
+  evDiff: 0,
+  bestRoom: null,
+  worstRoom: null,
+  bestBuyin: null,
+  worstBuyin: null,
+  totalDurationMinutes: 0,
+  averageDurationMinutes: 0
+})
 
   const [bankrollChartData, setBankrollChartData] = useState([])
   const [evChartData, setEvChartData] = useState([])
@@ -110,7 +112,7 @@ export default function Home() {
     const d = new Date(dateInput)
     const year = d.getFullYear()
     const month = String(d.getMonth() + 1).padStart(2, "0")
-    return ⁠ ${year}-${month} ⁠
+    return `${year}-${month}`
   }
 
   function formatMonthLabel(monthKey) {
@@ -129,7 +131,7 @@ export default function Home() {
       "Nov",
       "Déc"
     ]
-    return ⁠ ${monthNames[Number(month) - 1]} ${year} ⁠
+    return `${monthNames[Number(month) - 1]} ${year}`
   }
 
   function getFrenchWeekday(dateString) {
@@ -173,6 +175,7 @@ export default function Home() {
     let profit = 0
     let evTotal = 0
     let buyins = 0
+    let totalDurationMinutes = 0
 
     const groupedBuyins = {}
     const groupedRooms = {}
@@ -191,17 +194,19 @@ export default function Home() {
     let runningEv = 0
     const evCurve = []
 
-    tournois.forEach((t, index) => {
-      const tournoiProfit = Number(t.profit) || 0
-      const tournoiEv = Number(t.ev) || 0
-      const tournoiBuyin = Number(t.buyin) || 0
-      const room = t.room || "Inconnu"
-      const monthKey = formatMonthKey(t.date)
-      const weekday = getFrenchWeekday(t.date)
+ tournois.forEach((t, index) => {
+  const tournoiProfit = Number(t.profit) || 0
+  const tournoiEv = Number(t.ev) || 0
+  const tournoiBuyin = Number(t.buyin) || 0
+  const tournoiDuration = Number(t.duration_minutes) || 0
+  const room = t.room || "Inconnu"
+  const monthKey = formatMonthKey(t.date)
+  const weekday = getFrenchWeekday(t.date)
 
-      profit += tournoiProfit
-      evTotal += tournoiEv
-      buyins += tournoiBuyin
+  profit += tournoiProfit
+  evTotal += tournoiEv
+  buyins += tournoiBuyin
+  totalDurationMinutes += tournoiDuration
 
       runningProfit += tournoiProfit
       runningEv += tournoiEv
@@ -407,21 +412,27 @@ export default function Home() {
       sortedBuyinsByProfit.length > 0
         ? sortedBuyinsByProfit[sortedBuyinsByProfit.length - 1]
         : null
+    const averageDurationMinutes =
+        tournois.length > 0
+    ? Number((totalDurationMinutes / tournois.length).toFixed(1))
+    : 0
 
-    setStats({
-      profit: Number(profit.toFixed(2)),
-      ev: Number(evTotal.toFixed(2)),
-      count: tournois.length,
-      buyins: Number(buyins.toFixed(2)),
-      mouvementsImpact: Number(mouvementsImpact.toFixed(2)),
-      abi,
-      averageProfit,
-      evDiff: Number((profit - evTotal).toFixed(2)),
-      bestRoom,
-      worstRoom,
-      bestBuyin,
-      worstBuyin
-    })
+setStats({
+  profit: Number(profit.toFixed(2)),
+  ev: Number(evTotal.toFixed(2)),
+  count: tournois.length,
+  buyins: Number(buyins.toFixed(2)),
+  mouvementsImpact: Number(mouvementsImpact.toFixed(2)),
+  abi,
+  averageProfit,
+  evDiff: Number((profit - evTotal).toFixed(2)),
+  bestRoom,
+  worstRoom,
+  bestBuyin,
+  worstBuyin,
+  totalDurationMinutes,
+  averageDurationMinutes
+})
 
     setBankrollChartData(bankrollCurve)
     setEvChartData(evCurve)
@@ -590,7 +601,7 @@ export default function Home() {
     return {
       background:
         "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)",
-        border: "1px solid var(--border)"
+      border: "1px solid var(--border)"
     }
   }
 
@@ -673,6 +684,21 @@ export default function Home() {
           </div>
         </div>
 
+<div className="grid grid-2 dashboard-section">
+
+  <div className="kpi">
+    <div className="kpi-label">Temps total joué</div>
+    <div className="kpi-value">{stats.totalDurationMinutes} min</div>
+    <div className="kpi-meta">somme de tous les tournois</div>
+  </div>
+
+  <div className="kpi">
+    <div className="kpi-label">Durée moyenne / tournoi</div>
+    <div className="kpi-value">{stats.averageDurationMinutes} min</div>
+    <div className="kpi-meta">durée moyenne enregistrée</div>
+  </div>
+
+</div>
         <div className="dashboard-section card" style={{ marginBottom: 20 }}>
           <h3 className="section-title">Bankroll de départ</h3>
           <div className="actions">
@@ -846,7 +872,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: ⁠ ${bankrollProgressUp}% ⁠,
+                width: `${bankrollProgressUp}%`,
                 height: "100%",
                 background: "linear-gradient(90deg,#ff9f43,#ff6b6b)"
               }}
@@ -980,7 +1006,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: ⁠ ${goalProgressVolume}% ⁠,
+                width: `${goalProgressVolume}%`,
                 height: "100%",
                 background: "linear-gradient(90deg,#6c5ce7,#00d2ff)"
               }}
@@ -1015,7 +1041,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: ⁠ ${goalProgressProfit}% ⁠,
+                width: `${goalProgressProfit}%`,
                 height: "100%",
                 background: "linear-gradient(90deg,#2ecc71,#00c9a7)"
               }}
@@ -1050,7 +1076,7 @@ export default function Home() {
           >
             <div
               style={{
-                width: ⁠ ${yearlyProgress}% ⁠,
+                width: `${yearlyProgress}%`,
                 height: "100%",
                 background: "linear-gradient(90deg,#f093fb,#f5576c)"
               }}
@@ -1150,7 +1176,7 @@ export default function Home() {
           <div className="kpi">
             <div className="kpi-label">Meilleur buy-in</div>
             <div className="kpi-value">
-              {stats.bestBuyin ? ⁠ ${stats.bestBuyin.buyin} € ⁠ : "-"}
+              {stats.bestBuyin ? `${stats.bestBuyin.buyin} €` : "-"}
             </div>
             {stats.bestBuyin && (
               <div className="kpi-meta">
@@ -1162,7 +1188,7 @@ export default function Home() {
           <div className="kpi">
             <div className="kpi-label">Pire buy-in</div>
             <div className="kpi-value">
-              {stats.worstBuyin ? ⁠ ${stats.worstBuyin.buyin} € ⁠ : "-"}
+              {stats.worstBuyin ? `${stats.worstBuyin.buyin} €` : "-"}
             </div>
             {stats.worstBuyin && (
               <div className="kpi-meta">
@@ -1181,8 +1207,8 @@ export default function Home() {
                 <XAxis dataKey="date" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
-                  formatter={(value) => [⁠ ${value} € ⁠, "Bankroll"]}
-                  labelFormatter={(label) => ⁠ Date : ${label} ⁠}
+                  formatter={(value) => [`${value} €`, "Bankroll"]}
+                  labelFormatter={(label) => `Date : ${label}`}
                 />
                 <Line
                   type="monotone"
@@ -1205,10 +1231,10 @@ export default function Home() {
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
                   formatter={(value, name) => [
-                    ⁠ ${value} € ⁠,
+                    `${value} €`,
                     name === "profit" ? "Profit" : "EV"
                   ]}
-                  labelFormatter={(label) => ⁠ Date : ${label} ⁠}
+                  labelFormatter={(label) => `Date : ${label}`}
                 />
                 <Line
                   type="monotone"
@@ -1239,7 +1265,7 @@ export default function Home() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
                 <XAxis dataKey="label" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
-                <Tooltip formatter={(value) => [⁠ ${value} € ⁠, "Profit mensuel"]} />
+                <Tooltip formatter={(value) => [`${value} €`, "Profit mensuel"]} />
                 <Bar dataKey="profit" fill="#4ea8de" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -1267,7 +1293,7 @@ export default function Home() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
                 <XAxis dataKey="label" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
-                <Tooltip formatter={(value) => [⁠ ${value} € ⁠, "ABI mensuel"]} />
+                <Tooltip formatter={(value) => [`${value} €`, "ABI mensuel"]} />
                 <Line
                   type="monotone"
                   dataKey="abi"
@@ -1288,8 +1314,8 @@ export default function Home() {
                 <XAxis dataKey="room" stroke="#aab2c5" />
                 <YAxis stroke="#aab2c5" />
                 <Tooltip
-                  formatter={(value) => [⁠ ${value} € ⁠, "Profit"]}
-                  labelFormatter={(label) => ⁠ Room : ${label} ⁠}
+                  formatter={(value) => [`${value} €`, "Profit"]}
+                  labelFormatter={(label) => `Room : ${label}`}
                 />
                 <Bar dataKey="totalProfit" fill="#f5b041" radius={[8, 8, 0, 0]} />
               </BarChart>
@@ -1386,8 +1412,8 @@ export default function Home() {
                   <XAxis dataKey="date" stroke="#aab2c5" />
                   <YAxis stroke="#aab2c5" />
                   <Tooltip
-                    formatter={(value) => [⁠ ${value} € ⁠, "Bankroll room"]}
-                    labelFormatter={(label) => ⁠ Date : ${label} ⁠}
+                    formatter={(value) => [`${value} €`, "Bankroll room"]}
+                    labelFormatter={(label) => `Date : ${label}`}
                   />
                   <Line
                     type="monotone"

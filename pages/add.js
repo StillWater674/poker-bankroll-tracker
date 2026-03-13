@@ -6,19 +6,33 @@ import { supabase } from "../lib/supabaseClient"
 export default function AddTournament() {
   const router = useRouter()
 
-  const [sessionChecked, setSessionChecked] = useState(false)
+  const [loadingSession, setLoadingSession] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
-  const [date, setDate] = useState("")
-  const [room, setRoom] = useState("")
-  const [buyin, setBuyin] = useState("")
-  const [gains, setGains] = useState("")
-  const [position, setPosition] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    room: "",
+    buyin: "",
+    profit: "",
+    ev: "",
+    duration_minutes: "",
+    note: ""
+  })
 
   useEffect(() => {
     async function checkSession() {
-      const { data } = await supabase.auth.getSession()
+      const { data, error } = await supabase.auth.getSession()
+
+      if (error) {
+        console.error(error)
+        setErrorMessage("Erreur lors de la vérification de session.")
+        setLoadingSession(false)
+        return
+      }
+
       const session = data.session
 
       if (!session) {
@@ -27,61 +41,78 @@ export default function AddTournament() {
       }
 
       setCurrentUser(session.user)
-      setSessionChecked(true)
+      setLoadingSession(false)
     }
 
     checkSession()
   }, [router])
 
+  function handleChange(e) {
+    const { name, value } = e.target
+    setForm((prev) => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
-    setLoading(true)
+    setErrorMessage("")
+    setSuccessMessage("")
 
-    const {
-      data: { user },
-      error: userError
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      alert("Utilisateur non connecté")
-      setLoading(false)
-      router.push("/login")
+    if (!currentUser) {
+      setErrorMessage("Utilisateur non connecté.")
       return
     }
 
-    const buyinNumber = Number(buyin) || 0
-    const gainsNumber = Number(gains) || 0
-    const profit = gainsNumber - buyinNumber
+    if (!form.date || !form.room || form.buyin === "" || form.profit === "") {
+      setErrorMessage("Merci de remplir au minimum la date, la room, le buy-in et le profit.")
+      return
+    }
 
-    const { error } = await supabase.from("tournois").insert([
-      {
-        date,
-        room,
-        buyin: buyinNumber,
-        gains: gainsNumber,
-        profit,
-        position: position ? Number(position) : null,
-        user_id: user.id
-      }
-    ])
+    setSaving(true)
 
-    setLoading(false)
+    const payload = {
+      user_id: currentUser.id,
+      date: form.date,
+      room: form.room.trim(),
+      buyin: Number(form.buyin) || 0,
+      profit: Number(form.profit) || 0,
+      ev: form.ev === "" ? 0 : Number(form.ev),
+      duration_minutes: form.duration_minutes === "" ? 0 : Number(form.duration_minutes),
+      note: form.note.trim(),
+      created_at: new Date().toISOString()
+    }
+
+    const { error } = await supabase.from("tournois").insert([payload])
 
     if (error) {
-      alert(error.message)
+      console.error("Erreur insertion tournoi :", error)
+      setErrorMessage(error.message || "Impossible d'enregistrer le tournoi.")
+      setSaving(false)
       return
     }
 
-    alert("Tournoi ajouté")
-    router.push("/history")
+    setSuccessMessage("Tournoi enregistré avec succès.")
+
+    setForm({
+      date: new Date().toISOString().slice(0, 10),
+      room: "",
+      buyin: "",
+      profit: "",
+      ev: "",
+      duration_minutes: "",
+      note: ""
+    })
+
+    setSaving(false)
+
+    setTimeout(() => {
+      router.push("/")
+    }, 600)
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
-  if (!sessionChecked) {
+  if (loadingSession) {
     return (
       <div className="page">
         <div className="container">
@@ -94,134 +125,186 @@ export default function AddTournament() {
   return (
     <div className="page">
       <div className="container" style={{ maxWidth: 760 }}>
-        <div className="topbar">
+        <div className="topbar" style={{ marginBottom: 24 }}>
           <div className="brand">
             <div className="brand-mark">PT</div>
             <div className="brand-text">
               <div className="brand-title">Ajouter un tournoi</div>
               <div className="brand-subtitle">
-                {currentUser?.email ? `Connectée : ${currentUser.email}` : ""}
+                {currentUser?.email || "Saisie d'une nouvelle entrée"}
               </div>
             </div>
           </div>
 
           <div className="actions">
             <Link href="/">
-              <button className="btn btn-secondary">Dashboard</button>
+              <button className="btn btn-secondary">Retour dashboard</button>
             </Link>
+
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
-            <button className="btn btn-secondary" onClick={handleLogout}>
-              Déconnexion
-            </button>
-          </div>
-        </div>
-
-        <div className="hero" style={{ marginBottom: 20 }}>
-          <div className="hero-grid">
-            <div>
-              <h1 className="hero-title">Enregistrer un tournoi</h1>
-              <p className="hero-subtitle">
-                Chaque entrée sera automatiquement rattachée au compte connecté.
-              </p>
-
-              <div className="hero-badges">
-                <div className="badge">Sécurisé</div>
-                <div className="badge">Multi-utilisateur</div>
-                <div className="badge">Profit auto-calculé</div>
-              </div>
-            </div>
-
-            <div className="hero-side">
-              <div className="hero-side-card">
-                <div className="hero-side-label">Room</div>
-                <div className="hero-side-value">{room || "-"}</div>
-              </div>
-              <div className="hero-side-card">
-                <div className="hero-side-label">Buy-in</div>
-                <div className="hero-side-value">{buyin || 0} €</div>
-              </div>
-              <div className="hero-side-card">
-                <div className="hero-side-label">Gains</div>
-                <div className="hero-side-value">{gains || 0} €</div>
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="card">
-          <h2 className="section-title">Formulaire tournoi</h2>
+          <h1 className="section-title" style={{ marginBottom: 8 }}>
+            Nouveau tournoi
+          </h1>
+          <p className="section-subtitle" style={{ marginBottom: 24 }}>
+            Entre tes données proprement. Le tracker fera le reste.
+          </p>
 
-          <form className="form-grid" onSubmit={handleSubmit}>
-            <div>
-              <label className="label">Date</label>
-              <input
+          {errorMessage ? (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 12,
+                background: "rgba(255,107,107,0.12)",
+                border: "1px solid rgba(255,107,107,0.35)",
+                color: "#ff8b8b"
+              }}
+            >
+              {errorMessage}
+            </div>
+          ) : null}
+
+          {successMessage ? (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 12,
+                background: "rgba(46,204,113,0.12)",
+                border: "1px solid rgba(46,204,113,0.35)",
+                color: "#62d394"
+              }}
+            >
+              {successMessage}
+            </div>
+          ) : null}
+
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-2" style={{ marginBottom: 18 }}>
+              <div>
+                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                  Date
+                </label>
+                <input
+                  className="input"
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                  Room
+                </label>
+                <input
+                  className="input"
+                  type="text"
+                  name="room"
+                  value={form.room}
+                  onChange={handleChange}
+                  placeholder="Winamax, PokerStars..."
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-2" style={{ marginBottom: 18 }}>
+              <div>
+                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                  Buy-in (€)
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  name="buyin"
+                  value={form.buyin}
+                  onChange={handleChange}
+                  placeholder="5"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                  Profit (€)
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  name="profit"
+                  value={form.profit}
+                  onChange={handleChange}
+                  placeholder="12.50 ou -5"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-2" style={{ marginBottom: 18 }}>
+              <div>
+                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                  EV (€)
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  name="ev"
+                  value={form.ev}
+                  onChange={handleChange}
+                  placeholder="Optionnel"
+                />
+              </div>
+
+              <div>
+                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                  Durée (minutes)
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  name="duration_minutes"
+                  value={form.duration_minutes}
+                  onChange={handleChange}
+                  placeholder="Optionnel"
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 22 }}>
+              <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
+                Note
+              </label>
+              <textarea
                 className="input"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
+                name="note"
+                value={form.note}
+                onChange={handleChange}
+                placeholder="Read field, ICM compliqué, spew, deep run..."
+                rows={5}
+                style={{ resize: "vertical", minHeight: 120 }}
               />
             </div>
 
-            <div>
-              <label className="label">Room</label>
-              <input
-                className="input"
-                type="text"
-                value={room}
-                onChange={(e) => setRoom(e.target.value)}
-                placeholder="Ex : Winamax"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label">Buy-in</label>
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                value={buyin}
-                onChange={(e) => setBuyin(e.target.value)}
-                placeholder="Ex : 5"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label">Gains</label>
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                value={gains}
-                onChange={(e) => setGains(e.target.value)}
-                placeholder="Ex : 27"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label">Position</label>
-              <input
-                className="input"
-                type="number"
-                value={position}
-                onChange={(e) => setPosition(e.target.value)}
-                placeholder="Ex : 4"
-              />
-            </div>
-
-            <div className="actions" style={{ marginTop: 8 }}>
-              <button className="btn" type="submit" disabled={loading}>
-                {loading ? "Enregistrement..." : "Enregistrer le tournoi"}
+            <div className="actions">
+              <button className="btn" type="submit" disabled={saving}>
+                {saving ? "Enregistrement..." : "Enregistrer le tournoi"}
               </button>
 
-              <Link href="/history">
+              <Link href="/">
                 <button type="button" className="btn btn-secondary">
-                  Voir l’historique
+                  Annuler
                 </button>
               </Link>
             </div>
