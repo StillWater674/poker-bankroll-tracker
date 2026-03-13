@@ -13,8 +13,9 @@ export default function AddTournament() {
   const [successMessage, setSuccessMessage] = useState("")
 
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
+    date: "",
     room: "",
+    game_type: "MTT",
     buyin: "",
     profit: "",
     ev: "",
@@ -200,21 +201,35 @@ export default function AddTournament() {
                   required
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
-                  Room
-                </label>
-                <input
-                  className="input"
-                  type="text"
-                  name="room"
-                  value={form.room}
-                  onChange={handleChange}
-                  placeholder="Winamax, PokerStars..."
-                  required
-                />
-              </div>
+            <div>
+              <label className="kpi-label">Room</label>
+
+              <input
+                className="input"
+                type="text"
+                name="room"
+                value={form.room}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div>
+              <label className="kpi-label">Type de partie</label>
+
+              <select
+                className="input"
+                name="game_type"
+                value={form.game_type}
+                onChange={handleChange}
+              >
+                <option value="MTT">MTT</option>
+                <option value="Sit & Go">Sit & Go</option>
+                <option value="Cash Game">Cash Game</option>
+                <option value="Spin">Spin</option>
+                <option value="Satellite">Satellite</option>
+              </select>
             </div>
 
             <div className="grid grid-2" style={{ marginBottom: 18 }}>

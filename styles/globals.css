@@ -482,7 +482,7 @@ textarea {
   width: 46px;
   height: 46px;
   border-radius: 12px;
-  background: linear-gradient(135deg,#8b7cf6,#4ea8de);
+  background: linear-gradient(135deg, #8b7cf6, #4ea8de);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -502,10 +502,10 @@ textarea {
 /* ---------- CARDS ---------- */
 
 .card {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 16px;
   padding: 22px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(10px);
 }
 
@@ -516,16 +516,16 @@ textarea {
 /* ---------- KPI ---------- */
 
 .kpi {
-  background: linear-gradient(145deg,#0f172a,#111827);
+  background: linear-gradient(145deg, #0f172a, #111827);
   border-radius: 14px;
   padding: 18px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   transition: 0.2s;
 }
 
 .kpi:hover {
   transform: translateY(-2px);
-  border: 1px solid rgba(139,124,246,.4);
+  border: 1px solid rgba(139, 124, 246, .4);
 }
 
 .kpi-label {
@@ -547,15 +547,15 @@ textarea {
 }
 
 .grid-3 {
-  grid-template-columns: repeat(3,1fr);
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .grid-4 {
-  grid-template-columns: repeat(4,1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .grid-5 {
-  grid-template-columns: repeat(5,1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 
 /* ---------- FORM ---------- */
@@ -563,7 +563,7 @@ textarea {
 .input {
   width: 100%;
   background: #0f172a;
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid rgba(255, 255, 255, .08);
   padding: 12px;
   border-radius: 10px;
   color: white;
@@ -578,7 +578,7 @@ textarea {
 /* ---------- BUTTON ---------- */
 
 .btn {
-  background: linear-gradient(135deg,#8b7cf6,#4ea8de);
+  background: linear-gradient(135deg, #8b7cf6, #4ea8de);
   border: none;
   padding: 10px 18px;
   border-radius: 10px;
@@ -588,8 +588,8 @@ textarea {
 }
 
 .btn-secondary {
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .1);
 }
 
 /* ---------- MOBILE ---------- */
@@ -597,11 +597,11 @@ textarea {
 @media (max-width:900px) {
 
   .grid-5 {
-    grid-template-columns: repeat(2,1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .grid-4 {
-    grid-template-columns: repeat(2,1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .grid-3 {
