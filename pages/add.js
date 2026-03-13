@@ -78,7 +78,7 @@ export default function AddTournament() {
       date: form.date,
       room: form.room.trim(),
       game_type: form.game_type,
-      
+
       buyin: Number(form.buyin) || 0,
       profit: Number(form.profit) || 0,
       ev: form.ev === "" ? 0 : Number(form.ev),
