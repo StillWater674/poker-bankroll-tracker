@@ -1564,7 +1564,23 @@ export default function Home() {
             </table>
           </div>
         </div>
+        
+        <div className="card dashboard-section">
+          <h3 className="section-title">Types de partie</h3>
 
+          <div className="grid grid-3">
+            {gameTypeStats.map((item) => (
+              <div key={item.gameType} className="kpi">
+                <div className="kpi-label">{item.gameType}</div>
+                <div className="kpi-value">{item.count}</div>
+                <div className="kpi-meta">
+                  Profit {item.totalProfit} € • ROI {item.roi} %
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
         <div className="card">
           <h3 className="section-title">Profit par room</h3>
           <div className="table-wrap">
