@@ -234,23 +234,6 @@ export default function AddTournament() {
               </select>
             </div>
 
-            <div>
-              <label className="kpi-label">Type de partie</label>
-
-              <select
-                className="input"
-                name="game_type"
-                value={form.game_type}
-                onChange={handleChange}
-              >
-                <option value="MTT">MTT</option>
-                <option value="Sit & Go">Sit & Go</option>
-                <option value="Cash Game">Cash Game</option>
-                <option value="Spin">Spin</option>
-                <option value="Satellite">Satellite</option>
-              </select>
-            </div>
-
             <div className="grid grid-2" style={{ marginBottom: 18 }}>
               <div>
                 <label className="kpi-label" style={{ display: "block", marginBottom: 8 }}>
