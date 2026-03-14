@@ -189,6 +189,7 @@ export default function Home() {
     let evTotal = 0
     let buyins = 0
     let totalDurationMinutes = 0
+    let runningEvBuyin = 0
 
 
     const groupedBuyins = {}
@@ -216,6 +217,7 @@ export default function Home() {
       const tournoiDuration = Number(t.duration_minutes) || 0
       const tournoiDate = t.date ? t.date.slice(0, 10) : ""
       const gameType = t.game_type || t.gameType || "MTT"
+      const tournoiEvBuyin = tournoiBuyin > 0 ? tournoiEv / tournoiBuyin : 0
 
       const roomRaw = (t.room || "")
         .trim()
@@ -261,12 +263,14 @@ export default function Home() {
       totalDurationMinutes += tournoiDuration
       runningProfit += tournoiProfit
       runningEv += tournoiEv
+      runningEvBuyin += tournoiEvBuyin
 
       evCurve.push({
         id: index + 1,
         date: t.date,
         profit: Number(runningProfit.toFixed(2)),
-        ev: Number(runningEv.toFixed(2))
+        ev: Number(runningEv.toFixed(2)),
+        evBuyin: Number(runningEvBuyin.toFixed(2))
       })
 
       if (!groupedBuyins[tournoiBuyin]) {
@@ -1349,7 +1353,7 @@ export default function Home() {
         </div>
 
         <div className="card chart-card">
-          <h3 className="section-title">Courbe Profit vs EV</h3>
+          <h3 className="section-title">Courbe Profit vs EV (Buy-ins)</h3>
           <ResponsiveContainer width="100%" height="88%">
             <LineChart data={evChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
@@ -1357,7 +1361,7 @@ export default function Home() {
               <YAxis stroke="#aab2c5" />
               <Tooltip
                 formatter={(value, name) => [
-                  `${value} €`,
+                  name === "profit" ? `${value} €` : `${value} BI`,
                   name === "profit" ? "Profit" : "EV"
                 ]}
                 labelFormatter={(label) => `Date : ${label}`}
@@ -1372,7 +1376,7 @@ export default function Home() {
               />
               <Line
                 type="monotone"
-                dataKey="ev"
+                ddataKey="evBuyin"
                 stroke="#2ecc71"
                 strokeWidth={3}
                 dot={{ r: 2 }}
