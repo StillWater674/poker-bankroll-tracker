@@ -378,6 +378,8 @@ export default function Home() {
       }))
       .sort((a, b) => b.totalProfit - a.totalProfit)
 
+    setGameTypeStats(gameTypeArray)
+
     const roomArray = Object.values(groupedRooms)
       .map((item) => ({
         ...item,
@@ -517,7 +519,6 @@ export default function Home() {
     localStorage.setItem("startingBankroll", value.toString())
     setStartingBankroll(value)
     setInputBankroll(value.toString())
-    setGameTypeStats(gameTypeArray)
     fetchStats(value, selectedRoom)
   }
 
