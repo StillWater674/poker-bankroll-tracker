@@ -216,7 +216,22 @@ export default function Home() {
       const tournoiDuration = Number(t.duration_minutes) || 0
       const tournoiDate = t.date ? t.date.slice(0, 10) : ""
       const gameType = t.game_type || t.gameType || "MTT"
-      const room = t.room || "Inconnu"
+      const roomRaw = (t.room || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+
+      const roomMap = {
+        "poker star": "PokerStars",
+        "pokerstars": "PokerStars",
+        "poker stars": "PokerStars",
+        "winamax": "Winamax",
+        "pmu poker": "PMU Poker",
+        "pmu": "PMU Poker",
+        "unibet": "Unibet",
+      }
+
+      const room = roomMap[roomRaw] || (t.room || "Inconnu").trim()
       const monthKey = formatMonthKey(t.date)
       const weekday = getFrenchWeekday(t.date)
 
