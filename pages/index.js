@@ -215,7 +215,7 @@ export default function Home() {
       const tournoiBuyin = Number(t.buyin) || 0
       const tournoiDuration = Number(t.duration_minutes) || 0
       const tournoiDate = t.date ? t.date.slice(0, 10) : ""
-      const gameType = t.game_type || "MTT"
+      const gameType = t.game_type || t.gameType || "MTT"
       const room = t.room || "Inconnu"
       const monthKey = formatMonthKey(t.date)
       const weekday = getFrenchWeekday(t.date)
@@ -1564,7 +1564,7 @@ export default function Home() {
             </table>
           </div>
         </div>
-        
+
         <div className="card dashboard-section">
           <h3 className="section-title">Types de partie</h3>
 
@@ -1580,7 +1580,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-        
+
         <div className="card">
           <h3 className="section-title">Profit par room</h3>
           <div className="table-wrap">
