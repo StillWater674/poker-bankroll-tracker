@@ -259,6 +259,8 @@ export default function Home() {
       evTotal += tournoiEv
       buyins += tournoiBuyin
       totalDurationMinutes += tournoiDuration
+      runningProfit += tournoiProfit
+      runningEv += tournoiEv
 
       evCurve.push({
         id: index + 1,
