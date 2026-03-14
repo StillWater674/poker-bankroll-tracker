@@ -216,6 +216,7 @@ export default function Home() {
       const tournoiDuration = Number(t.duration_minutes) || 0
       const tournoiDate = t.date ? t.date.slice(0, 10) : ""
       const gameType = t.game_type || t.gameType || "MTT"
+
       const roomRaw = (t.room || "")
         .trim()
         .toLowerCase()
@@ -1503,53 +1504,93 @@ export default function Home() {
         </div>
 
         {selectedRoom === "Toutes" ? (
-          <p className="section-subtitle">
-            Choisis une room pour afficher sa courbe dédiée.
-          </p>
-        ) : (
-          <>
-            {selectedRoomStats && (
-              <div className="grid grid-4" style={{ marginBottom: 18 }}>
-                <div className="kpi">
-                  <div className="kpi-label">Room</div>
-                  <div className="kpi-value">{selectedRoomStats.room}</div>
-                </div>
-                <div className="kpi">
-                  <div className="kpi-label">Tournois</div>
-                  <div className="kpi-value">{selectedRoomStats.count}</div>
-                </div>
-                <div className="kpi">
-                  <div className="kpi-label">Profit</div>
-                  <div className="kpi-value">{selectedRoomStats.totalProfit} €</div>
-                </div>
-                <div className="kpi">
-                  <div className="kpi-label">ROI</div>
-                  <div className="kpi-value">{selectedRoomStats.roi} %</div>
-                </div>
+          <div className="grid grid-4" style={{ marginBottom: 18 }}>
+            <div className="kpi">
+              <div className="kpi-label">Room</div>
+              <div className="kpi-value">Toutes</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">Tournois</div>
+              <div className="kpi-value">{stats.count}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">Profit</div>
+              <div className="kpi-value">{stats.profit} €</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">ROI</div>
+              <div className="kpi-value">
+                {stats.buyins > 0 ? Number(((stats.profit / stats.buyins) * 100).toFixed(1)) : 0} %
               </div>
-            )}
+            </div>
+          </div>
+        ) : selectedRoomStats ? (
+          <div className="grid grid-4" style={{ marginBottom: 18 }}>
+            <div className="kpi">
+              <div className="kpi-label">Room</div>
+              <div className="kpi-value">{selectedRoomStats.room}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">Tournois</div>
+              <div className="kpi-value">{selectedRoomStats.count}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">Profit</div>
+              <div className="kpi-value">{selectedRoomStats.totalProfit} €</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">ROI</div>
+              <div className="kpi-value">{selectedRoomStats.roi} %</div>
+            </div>
+          </div>
+        ) : null}
 
-            <ResponsiveContainer width="100%" height="72%">
-              <LineChart data={roomChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
-                <XAxis dataKey="date" stroke="#aab2c5" />
-                <YAxis stroke="#aab2c5" />
-                <Tooltip
-                  formatter={(value) => [`${value} €`, "Bankroll room"]}
-                  labelFormatter={(label) => `Date : ${label}`}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="bankroll"
-                  stroke="#2ecc71"
-                  strokeWidth={3}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </>
-        )}
+        <p className="section-subtitle">
+          Choisis une room pour afficher sa courbe dédiée.
+        </p>
+        ) : (
+        <>
+          {selectedRoomStats && (
+            <div className="grid grid-4" style={{ marginBottom: 18 }}>
+              <div className="kpi">
+                <div className="kpi-label">Room</div>
+                <div className="kpi-value">{selectedRoomStats.room}</div>
+              </div>
+              <div className="kpi">
+                <div className="kpi-label">Tournois</div>
+                <div className="kpi-value">{selectedRoomStats.count}</div>
+              </div>
+              <div className="kpi">
+                <div className="kpi-label">Profit</div>
+                <div className="kpi-value">{selectedRoomStats.totalProfit} €</div>
+              </div>
+              <div className="kpi">
+                <div className="kpi-label">ROI</div>
+                <div className="kpi-value">{selectedRoomStats.roi} %</div>
+              </div>
+            </div>
+          )}
+
+          <ResponsiveContainer width="100%" height="72%">
+            <LineChart data={roomChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2b3244" />
+              <XAxis dataKey="date" stroke="#aab2c5" />
+              <YAxis stroke="#aab2c5" />
+              <Tooltip
+                formatter={(value) => [`${value} €`, "Bankroll room"]}
+                labelFormatter={(label) => `Date : ${label}`}
+              />
+              <Line
+                type="monotone"
+                dataKey="bankroll"
+                stroke="#2ecc71"
+                strokeWidth={3}
+                dot={{ r: 3 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </>
       </div>
 
       <div className="grid grid-2 dashboard-section">
