@@ -717,7 +717,7 @@ export default function Home() {
               <button className="btn">Ajouter un tournoi</button>
             </Link>
 
-            <Link href="/import" className="ghost-btn">Importer CSV</Link>
+            <Link href="/import" className="import-btn">Importer CSV</Link>
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
