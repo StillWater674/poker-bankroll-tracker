@@ -1548,7 +1548,7 @@ export default function Home() {
         <p className="section-subtitle">
           Choisis une room pour afficher sa courbe dédiée.
         </p>
-        ) : (
+
         <>
           {selectedRoomStats && (
             <div className="grid grid-4" style={{ marginBottom: 18 }}>
