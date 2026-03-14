@@ -189,7 +189,6 @@ export default function Home() {
     let evTotal = 0
     let buyins = 0
     let totalDurationMinutes = 0
-    let runningEvBuyin = 0
 
 
     const groupedBuyins = {}
@@ -208,6 +207,7 @@ export default function Home() {
 
     let runningProfit = 0
     let runningEv = 0
+    let runningEvBuyin = 0
     const evCurve = []
 
     tournois.forEach((t, index) => {
@@ -738,7 +738,7 @@ export default function Home() {
         <div className="hero">
           <div className="hero-grid">
             <div>
-              <h1 className="hero-title">Ton cockpit bankroll, room, volume, ROI et EV.</h1>
+              <h1 className="hero-title">Le meilleur tracker MTT simple et intelligent</h1>
               <p className="hero-subtitle">
                 Lis ta progression comme un joueur pro : courbes, ABI, EV,
                 profit par room, rythme mensuel et jours les plus rentables.
@@ -1376,7 +1376,7 @@ export default function Home() {
               />
               <Line
                 type="monotone"
-                ddataKey="evBuyin"
+                dataKey="evBuyin"
                 stroke="#2ecc71"
                 strokeWidth={3}
                 dot={{ r: 2 }}
