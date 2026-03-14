@@ -716,6 +716,7 @@ export default function Home() {
             <Link href="/add">
               <button className="btn">Ajouter un tournoi</button>
             </Link>
+
             <Link href="/import" className="ghost-btn">Importer CSV</Link>
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
@@ -727,10 +728,6 @@ export default function Home() {
 
             <Link href="/profile">
               <button className="btn btn-secondary">Profil joueur</button>
-            </Link>
-
-            <Link href="/import" className="ghost-btn">
-              Importer CSV
             </Link>
 
             <button className="btn btn-secondary" onClick={handleLogout}>
