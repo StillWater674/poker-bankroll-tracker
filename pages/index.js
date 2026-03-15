@@ -13,7 +13,8 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts"
-import ImportCsvButton from "../components/ImportCsvButton";
+import ImportCsvButton from "./ImportCsvButton"
+
 export default function Home() {
   const router = useRouter()
 
@@ -34,7 +35,6 @@ export default function Home() {
     worstRoom: null,
     bestBuyin: null,
     worstBuyin: null,
-
     todayCount: 0,
     todayProfit: 0,
     todayEv: 0,
@@ -190,7 +190,6 @@ export default function Home() {
     let buyins = 0
     let totalDurationMinutes = 0
 
-
     const groupedBuyins = {}
     const groupedRooms = {}
     const groupedMonths = {}
@@ -250,6 +249,7 @@ export default function Home() {
       groupedGameTypes[gameType].count += 1
       groupedGameTypes[gameType].totalProfit += tournoiProfit
       groupedGameTypes[gameType].totalBuyins += tournoiBuyin
+
       if (tournoiDate === today) {
         todayCount += 1
         todayProfit += tournoiProfit
@@ -481,17 +481,15 @@ export default function Home() {
       sortedBuyinsByProfit.length > 0
         ? sortedBuyinsByProfit[sortedBuyinsByProfit.length - 1]
         : null
+
     const averageDurationMinutes =
       tournois.length > 0
         ? Number((totalDurationMinutes / tournois.length).toFixed(1))
         : 0
 
     const todayHours = todayDuration / 60
-
     const todayEurHour =
-      todayHours > 0
-        ? Number((todayProfit / todayHours).toFixed(2))
-        : 0
+      todayHours > 0 ? Number((todayProfit / todayHours).toFixed(2)) : 0
 
     setStats({
       profit: Number(profit.toFixed(2)),
@@ -646,9 +644,8 @@ export default function Home() {
   const tournamentsNeeded =
     profitPerTournament > 0 ? Math.ceil(moneyNeeded / profitPerTournament) : 0
 
-  const monthsNeeded = monthlyGoal > 0
-    ? Math.ceil(tournamentsNeeded / monthlyGoal)
-    : 0
+  const monthsNeeded =
+    monthlyGoal > 0 ? Math.ceil(tournamentsNeeded / monthlyGoal) : 0
 
   let evStatus = "Even run"
   if (stats.evDiff > 0) evStatus = "Run good"
@@ -716,7 +713,12 @@ export default function Home() {
             <Link href="/add">
               <button className="btn">Ajouter un tournoi</button>
             </Link>
-           <ImportCsvButton user={currentUser} />
+
+            <ImportCsvButton
+              user={currentUser}
+              onImportDone={() => fetchStats(startingBankroll, selectedRoom)}
+            />
+
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
@@ -732,8 +734,6 @@ export default function Home() {
             <button className="btn btn-secondary" onClick={handleLogout}>
               Déconnexion
             </button>
-
-
           </div>
         </div>
 
@@ -811,7 +811,6 @@ export default function Home() {
       </div>
 
       <div className="grid grid-2 dashboard-section">
-
         <div className="kpi">
           <div className="kpi-label">Temps total joué</div>
           <div className="kpi-value">{stats.totalDurationMinutes} min</div>
@@ -823,8 +822,8 @@ export default function Home() {
           <div className="kpi-value">{stats.averageDurationMinutes} min</div>
           <div className="kpi-meta">durée moyenne enregistrée</div>
         </div>
-
       </div>
+
       <div className="dashboard-section card" style={{ marginBottom: 20 }}>
         <h3 className="section-title">Bankroll de départ</h3>
         <div className="actions">
