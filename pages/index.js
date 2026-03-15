@@ -716,10 +716,7 @@ export default function Home() {
             <Link href="/add">
               <button className="btn">Ajouter un tournoi</button>
             </Link>
-            <div className="flex gap-3">
-              <button>Ajouter un tournoi</button>
-              <ImportCsvButton user={user} onImportDone={fetchTournois} />
-            </div>
+           <ImportCsvButton user={currentUser} />
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
