@@ -13,7 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts"
-
+import ImportCsvButton from "../components/ImportCsvButton";
 export default function Home() {
   const router = useRouter()
 
@@ -716,9 +716,10 @@ export default function Home() {
             <Link href="/add">
               <button className="btn">Ajouter un tournoi</button>
             </Link>
-            <Link href="/import">
-              <button className="btn btn-import">Importer CSV</button>
-            </Link>
+            <div className="flex gap-3">
+              <button>Ajouter un tournoi</button>
+              <ImportCsvButton user={user} onImportDone={fetchTournois} />
+            </div>
             <Link href="/history">
               <button className="btn btn-secondary">Historique</button>
             </Link>
