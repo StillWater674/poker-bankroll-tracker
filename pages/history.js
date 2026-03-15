@@ -20,14 +20,24 @@ export default function HistoryPage() {
   const [editForm, setEditForm] = useState({
     date: "",
     room: "",
+    game_type: "MTT",
     buyin: "",
-    gains: "",
-    position: ""
+    profit: "",
+    ev: "",
+    duration_minutes: "",
+    note: ""
   })
 
   useEffect(() => {
     async function checkSession() {
-      const { data } = await supabase.auth.getSession()
+      const { data, error } = await supabase.auth.getSession()
+
+      if (error) {
+        console.error(error)
+        router.push("/login")
+        return
+      }
+
       const session = data.session
 
       if (!session) {
@@ -36,17 +46,22 @@ export default function HistoryPage() {
       }
 
       setCurrentUser(session.user)
-      await fetchTournois()
+      await fetchTournois(session.user.id)
       setSessionChecked(true)
     }
 
     checkSession()
   }, [router])
 
-  async function fetchTournois() {
+  async function fetchTournois(userId) {
+    const idToUse = userId || currentUser?.id
+
+    if (!idToUse) return
+
     const { data, error } = await supabase
       .from("tournois")
       .select("*")
+      .eq("user_id", idToUse)
       .order("date", { ascending: false })
 
     if (error) {
@@ -62,11 +77,11 @@ export default function HistoryPage() {
     let result = [...tournois]
 
     if (dateFrom) {
-      result = result.filter((t) => t.date >= dateFrom)
+      result = result.filter((t) => (t.date ? t.date.slice(0, 10) >= dateFrom : false))
     }
 
     if (dateTo) {
-      result = result.filter((t) => t.date <= dateTo)
+      result = result.filter((t) => (t.date ? t.date.slice(0, 10) <= dateTo : false))
     }
 
     if (roomFilter.trim()) {
@@ -88,11 +103,14 @@ export default function HistoryPage() {
   function startEdit(t) {
     setEditingId(t.id)
     setEditForm({
-      date: t.date || "",
+      date: t.date ? t.date.slice(0, 10) : "",
       room: t.room || "",
+      game_type: t.game_type || "MTT",
       buyin: t.buyin ?? "",
-      gains: t.gains ?? "",
-      position: t.position ?? ""
+      profit: t.profit ?? "",
+      ev: t.ev ?? "",
+      duration_minutes: t.duration_minutes ?? "",
+      note: t.note || ""
     })
   }
 
@@ -101,28 +119,31 @@ export default function HistoryPage() {
     setEditForm({
       date: "",
       room: "",
+      game_type: "MTT",
       buyin: "",
-      gains: "",
-      position: ""
+      profit: "",
+      ev: "",
+      duration_minutes: "",
+      note: ""
     })
   }
 
   async function saveEdit(id) {
-    const buyinNumber = Number(editForm.buyin) || 0
-    const gainsNumber = Number(editForm.gains) || 0
-    const profit = gainsNumber - buyinNumber
-
     const { error } = await supabase
       .from("tournois")
       .update({
         date: editForm.date,
-        room: editForm.room,
-        buyin: buyinNumber,
-        gains: gainsNumber,
-        profit,
-        position: editForm.position ? Number(editForm.position) : null
+        room: editForm.room.trim(),
+        game_type: editForm.game_type,
+        buyin: Number(editForm.buyin) || 0,
+        profit: Number(editForm.profit) || 0,
+        ev: editForm.ev === "" ? 0 : Number(editForm.ev),
+        duration_minutes:
+          editForm.duration_minutes === "" ? 0 : Number(editForm.duration_minutes),
+        note: editForm.note.trim()
       })
       .eq("id", id)
+      .eq("user_id", currentUser.id)
 
     if (error) {
       alert(error.message)
@@ -137,7 +158,11 @@ export default function HistoryPage() {
     const confirmed = window.confirm("Supprimer ce tournoi ?")
     if (!confirmed) return
 
-    const { error } = await supabase.from("tournois").delete().eq("id", id)
+    const { error } = await supabase
+      .from("tournois")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", currentUser.id)
 
     if (error) {
       alert(error.message)
@@ -147,21 +172,33 @@ export default function HistoryPage() {
     await fetchTournois()
   }
 
-  async function exportCSV() {
+  function exportCSV() {
     const rows = filteredTournois.map((t) => ({
-      date: t.date,
-      room: t.room,
-      buyin: t.buyin,
-      gains: t.gains,
-      profit: t.profit,
-      position: t.position
+      date: t.date ? t.date.slice(0, 10) : "",
+      room: t.room || "",
+      game_type: t.game_type || "",
+      buyin: t.buyin ?? "",
+      profit: t.profit ?? "",
+      ev: t.ev ?? "",
+      duration_minutes: t.duration_minutes ?? "",
+      note: t.note ?? ""
     }))
 
-    const headers = ["date", "room", "buyin", "gains", "profit", "position"]
+    const headers = [
+      "date",
+      "room",
+      "game_type",
+      "buyin",
+      "profit",
+      "ev",
+      "duration_minutes",
+      "note"
+    ]
+
     const csv = [
       headers.join(","),
       ...rows.map((row) =>
-        headers.map((header) => `"${row[header] ?? ""}"`).join(",")
+        headers.map((header) => `"${String(row[header] ?? "").replace(/"/g, '""')}"`).join(",")
       )
     ].join("\n")
 
@@ -174,6 +211,7 @@ export default function HistoryPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   async function handleLogout() {
@@ -303,10 +341,11 @@ export default function HistoryPage() {
                 <tr>
                   <th>Date</th>
                   <th>Room</th>
+                  <th>Type</th>
                   <th>Buy-in</th>
-                  <th>Gains</th>
                   <th>Profit</th>
-                  <th>Position</th>
+                  <th>EV</th>
+                  <th>Durée</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -327,7 +366,7 @@ export default function HistoryPage() {
                             }
                           />
                         ) : (
-                          t.date
+                          t.date ? t.date.slice(0, 10) : ""
                         )}
                       </td>
 
@@ -348,6 +387,26 @@ export default function HistoryPage() {
 
                       <td>
                         {isEditing ? (
+                          <select
+                            className="input"
+                            value={editForm.game_type}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, game_type: e.target.value })
+                            }
+                          >
+                            <option value="MTT">MTT</option>
+                            <option value="Sit & Go">Sit & Go</option>
+                            <option value="Cash Game">Cash Game</option>
+                            <option value="Spin">Spin</option>
+                            <option value="Satellite">Satellite</option>
+                          </select>
+                        ) : (
+                          t.game_type || "MTT"
+                        )}
+                      </td>
+
+                      <td>
+                        {isEditing ? (
                           <input
                             className="input"
                             type="number"
@@ -362,26 +421,36 @@ export default function HistoryPage() {
                         )}
                       </td>
 
+                      <td className={(Number(t.profit) || 0) >= 0 ? "stat-positive" : "stat-negative"}>
+                        {isEditing ? (
+                          <input
+                            className="input"
+                            type="number"
+                            step="0.01"
+                            value={editForm.profit}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, profit: e.target.value })
+                            }
+                          />
+                        ) : (
+                          `${t.profit} €`
+                        )}
+                      </td>
+
                       <td>
                         {isEditing ? (
                           <input
                             className="input"
                             type="number"
                             step="0.01"
-                            value={editForm.gains}
+                            value={editForm.ev}
                             onChange={(e) =>
-                              setEditForm({ ...editForm, gains: e.target.value })
+                              setEditForm({ ...editForm, ev: e.target.value })
                             }
                           />
                         ) : (
-                          `${t.gains} €`
+                          `${Number(t.ev || 0)} €`
                         )}
-                      </td>
-
-                      <td className={(Number(t.profit) || 0) >= 0 ? "stat-positive" : "stat-negative"}>
-                        {isEditing
-                          ? `${(Number(editForm.gains || 0) - Number(editForm.buyin || 0)).toFixed(2)} €`
-                          : `${t.profit} €`}
                       </td>
 
                       <td>
@@ -389,13 +458,16 @@ export default function HistoryPage() {
                           <input
                             className="input"
                             type="number"
-                            value={editForm.position}
+                            value={editForm.duration_minutes}
                             onChange={(e) =>
-                              setEditForm({ ...editForm, position: e.target.value })
+                              setEditForm({
+                                ...editForm,
+                                duration_minutes: e.target.value
+                              })
                             }
                           />
                         ) : (
-                          t.position
+                          `${Number(t.duration_minutes || 0)} min`
                         )}
                       </td>
 

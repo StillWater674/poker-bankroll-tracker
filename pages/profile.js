@@ -34,6 +34,7 @@ export default function Profile() {
         const { data: tournois, error: tournoisError } = await supabase
             .from("tournois")
             .select("*")
+            .eq("user_id", user.id)
             .order("date", { ascending: true })
 
         if (tournoisError) {
@@ -170,7 +171,15 @@ export default function Profile() {
         return "En reconstruction"
     }
 
-    if (!stats || !user) return null
+    if (!user || !stats) {
+        return (
+            <div className="page">
+                <div className="container">
+                    <div className="card">Chargement du profil...</div>
+                </div>
+            </div>
+        )
+    }
 
     const displayPseudo =
         user.user_metadata?.pseudo || pseudo || user.email?.split("@")[0] || "Player"

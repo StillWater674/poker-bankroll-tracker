@@ -4,112 +4,112 @@ import { useRouter } from "next/router"
 import { supabase } from "../lib/supabaseClient"
 
 export default function MovementsHistory() {
-
   const router = useRouter()
 
-  const [sessionChecked,setSessionChecked] = useState(false)
-  const [currentUser,setCurrentUser] = useState(null)
+  const [sessionChecked, setSessionChecked] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [movements, setMovements] = useState([])
+  const [errorMessage, setErrorMessage] = useState("")
 
-  const [movements,setMovements] = useState([])
+  useEffect(() => {
+    async function checkSession() {
+      const { data, error } = await supabase.auth.getSession()
 
-  useEffect(()=>{
+      if (error) {
+        console.error(error)
+        setErrorMessage("Erreur lors de la vérification de session.")
+        setSessionChecked(true)
+        return
+      }
 
-    async function checkSession(){
-
-      const { data } = await supabase.auth.getSession()
       const session = data.session
 
-      if(!session){
+      if (!session) {
         router.push("/login")
         return
       }
 
       setCurrentUser(session.user)
-      await fetchMovements()
+      await fetchMovements(session.user.id)
       setSessionChecked(true)
     }
 
     checkSession()
+  }, [router])
 
-  },[router])
+  async function fetchMovements(userId) {
+    const idToUse = userId || currentUser?.id
+    if (!idToUse) return
 
-
-  async function fetchMovements(){
-
-    const { data,error } = await supabase
+    const { data, error } = await supabase
       .from("mouvements")
       .select("*")
-      .order("date",{ascending:false})
+      .eq("user_id", idToUse)
+      .order("date", { ascending: false })
 
-    if(error){
+    if (error) {
       alert(error.message)
       return
     }
 
     setMovements(data || [])
-
   }
 
-  async function deleteMovement(id){
-
+  async function deleteMovement(id) {
     const confirmDelete = window.confirm("Supprimer ce mouvement ?")
-
-    if(!confirmDelete) return
+    if (!confirmDelete) return
 
     const { error } = await supabase
       .from("mouvements")
       .delete()
-      .eq("id",id)
+      .eq("id", id)
+      .eq("user_id", currentUser.id)
 
-    if(error){
+    if (error) {
       alert(error.message)
       return
     }
 
     await fetchMovements()
-
   }
 
-  async function handleLogout(){
+  async function handleLogout() {
     await supabase.auth.signOut()
     router.push("/login")
   }
 
+  function exportCSV() {
+    const headers = ["date", "type", "montant", "description"]
 
-  function exportCSV(){
-
-    const headers = ["date","type","montant","description"]
-
-    const rows = movements.map(m => ({
-      date:m.date,
-      type:m.type,
-      montant:m.montant,
-      description:m.description
+    const rows = movements.map((m) => ({
+      date: m.date,
+      type: m.type,
+      montant: m.montant,
+      description: m.description
     }))
 
     const csv = [
       headers.join(","),
-      ...rows.map(row =>
-        headers.map(h => `"${row[h] ?? ""}"`).join(",")
+      ...rows.map((row) =>
+        headers.map((h) => `"${String(row[h] ?? "").replace(/"/g, '""')}"`).join(",")
       )
     ].join("\n")
 
-    const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"})
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
 
     const link = document.createElement("a")
     link.href = url
-    link.setAttribute("download","mouvements.csv")
+    link.setAttribute("download", "mouvements.csv")
 
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-
+    URL.revokeObjectURL(url)
   }
 
-
-  if(!sessionChecked){
-    return(
+  if (!sessionChecked) {
+    return (
       <div className="page">
         <div className="container">
           <div className="card">Chargement...</div>
@@ -118,31 +118,20 @@ export default function MovementsHistory() {
     )
   }
 
-
-  return(
-
+  return (
     <div className="page">
-
       <div className="container">
-
         <div className="topbar">
-
           <div className="brand">
-
             <div className="brand-mark">PT</div>
 
             <div className="brand-text">
               <div className="brand-title">Historique des mouvements</div>
-              <div className="brand-subtitle">
-                {currentUser?.email}
-              </div>
+              <div className="brand-subtitle">{currentUser?.email}</div>
             </div>
-
           </div>
 
-
           <div className="actions">
-
             <Link href="/">
               <button className="btn btn-secondary">
                 Dashboard
@@ -168,23 +157,31 @@ export default function MovementsHistory() {
             >
               Déconnexion
             </button>
-
           </div>
-
         </div>
 
-
         <div className="card">
-
           <h2 className="section-title">
             Historique des mouvements
           </h2>
 
+          {errorMessage ? (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 12,
+                background: "rgba(255,107,107,0.12)",
+                border: "1px solid rgba(255,107,107,0.35)",
+                color: "#ff8b8b"
+              }}
+            >
+              {errorMessage}
+            </div>
+          ) : null}
 
           <div className="table-wrap">
-
             <table className="table">
-
               <thead>
                 <tr>
                   <th>Date</th>
@@ -196,51 +193,44 @@ export default function MovementsHistory() {
               </thead>
 
               <tbody>
-
-                {movements.map(m => (
-
+                {movements.map((m) => (
                   <tr key={m.id}>
-
                     <td>{m.date}</td>
                     <td>{m.type}</td>
 
-                    <td className={
-                      m.type === "depot" || m.type === "ajout"
-                        ? "stat-positive"
-                        : "stat-negative"
-                    }>
+                    <td
+                      className={
+                        m.type === "depot" || m.type === "ajout"
+                          ? "stat-positive"
+                          : "stat-negative"
+                      }
+                    >
                       {m.montant} €
                     </td>
 
                     <td>{m.description}</td>
 
                     <td>
-
                       <button
                         className="btn btn-danger"
-                        onClick={()=>deleteMovement(m.id)}
+                        onClick={() => deleteMovement(m.id)}
                       >
                         Supprimer
                       </button>
-
                     </td>
-
                   </tr>
-
                 ))}
-
               </tbody>
-
             </table>
 
+            {!movements.length ? (
+              <p className="section-subtitle" style={{ marginTop: 16 }}>
+                Aucun mouvement enregistré pour le moment.
+              </p>
+            ) : null}
           </div>
-
         </div>
-
       </div>
-
     </div>
-
   )
-
 }
